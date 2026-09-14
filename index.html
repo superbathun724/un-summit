@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>YOUTH LEADER</title>
+<style>
+:root{
+  --sky:#7FC4E8; --smog:#8A7A5A; --sea:#1F5F8B; --deep:#0E2A47;
+  --ink:#16232E; --paper:#EEF3F5; --mist:#D6E0E6; --coin:#F2B134; --alert:#E05A47; --leaf:#4E9F5C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:"Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--deep);color:var(--ink);display:flex;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+#app{width:100%;max-width:420px;min-height:100vh;background:var(--paper);display:flex;flex-direction:column;position:relative;overflow:hidden}
+
+/* ---------- top bar ---------- */
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;gap:8px}
+.brand{font-weight:800;letter-spacing:-.02em;font-size:18px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--mist);border-radius:999px;padding:5px 10px 5px 8px;font-size:13px;font-weight:600;cursor:pointer}
+.chip .dot{width:9px;height:9px;border-radius:50%}
+.role-E .dot{background:var(--smog)} .role-R .dot{background:var(--sea)} .role-B .dot{background:linear-gradient(90deg,var(--smog) 50%,var(--sea) 50%)}
+
+/* ---------- scene ---------- */
+#scene{position:relative;height:300px;overflow:hidden;cursor:pointer;background:linear-gradient(var(--sky),#c9e7f5 70%,var(--sea) 70%,var(--sea))}
+#scene svg{position:absolute;inset:0;width:100%;height:100%}
+#smog{position:absolute;inset:0;background:linear-gradient(var(--smog),rgba(138,122,90,.55) 60%,transparent);pointer-events:none;transition:opacity .35s}
+#scene.shake{animation:shake .5s}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.puff{position:absolute;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.85);pointer-events:none;animation:rise .9s forwards}
+@keyframes rise{to{transform:translateY(-90px) scale(2.4);opacity:0}}
+.pop{position:absolute;font-weight:800;color:var(--coin);text-shadow:0 1px 0 #7a4b00;pointer-events:none;animation:popup .7s forwards;font-size:18px}
+@keyframes popup{to{transform:translateY(-50px);opacity:0}}
+#hint{position:absolute;left:0;right:0;top:12px;text-align:center;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);font-size:15px;pointer-events:none}
+#wave{position:absolute;left:-100%;bottom:0;width:100%;height:120px;background:radial-gradient(ellipse at 50% 100%,rgba(14,42,71,.9),rgba(14,42,71,0) 70%);pointer-events:none;transition:left 1.2s ease-in}
+#wave.on{left:0}
+
+/* ---------- meters ---------- */
+#meters{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 16px 4px}
+.meter{background:#fff;border-radius:14px;padding:10px 12px}
+.meter b{display:block;font-size:22px;letter-spacing:-.02em}
+.meter small{color:#5b6b78;font-size:12px}
+.bar{height:6px;background:var(--mist);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--leaf);width:0;transition:width .3s}
+#ticker{margin:6px 16px 0;font-size:12.5px;color:#3c4d5a;min-height:18px}
+#ticker.bad{color:var(--alert);font-weight:600}
+#ticker.good{color:var(--leaf);font-weight:600}
+
+/* ---------- tabs ---------- */
+nav{display:flex;margin:10px 16px 0;background:var(--mist);border-radius:12px;padding:3px}
+nav button{flex:1;border:0;background:transparent;padding:8px;border-radius:9px;font-weight:700;font-size:14px;color:#5b6b78;cursor:pointer}
+nav button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+section{padding:12px 16px 24px;display:none}
+section.on{display:block}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:14px;padding:12px;margin-bottom:8px}
+.row .t{font-weight:700;font-size:15px}
+.row .d{font-size:12.5px;color:#5b6b78;margin-top:2px}
+.btn{border:0;background:var(--deep);color:#fff;font-weight:700;padding:9px 13px;border-radius:10px;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn.coin{background:var(--coin);color:#3d2a00}
+.btn:disabled{opacity:.35;cursor:default}
+.rank{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:9px 12px;background:#fff;border-radius:12px;margin-bottom:6px;font-size:14px}
+.rank.me{outline:2px solid var(--coin)}
+.rank .n{font-weight:800;color:#5b6b78}
+.rank .v{font-weight:700}
+.tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--mist);color:#3c4d5a;margin-left:6px;vertical-align:middle}
+.tag.E{background:#e7e0d0;color:#5c4a24}.tag.R{background:#d5e6f2;color:#123e5e}.tag.B{background:linear-gradient(90deg,#e7e0d0,#d5e6f2);color:#333}
+p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
+
+/* ---------- overlay ---------- */
+#gate{position:absolute;inset:0;background:var(--deep);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:32px 28px;z-index:10}
+#gate h1{font-size:34px;line-height:1.05;letter-spacing:-.03em;margin-bottom:10px}
+#gate p{color:#b9cbdc;line-height:1.5;margin-bottom:18px;font-size:15px}
+#gate select{width:100%;padding:12px;border-radius:12px;border:0;font-size:16px;margin-bottom:12px;background:#fff;color:var(--ink)}
+#gate .btn{width:100%;padding:14px;font-size:16px;background:var(--coin);color:#3d2a00}
+#gate .why{font-size:12.5px;color:#8fa6ba;margin-top:14px;line-height:1.5}
+.toast{position:absolute;left:16px;right:16px;bottom:18px;background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;z-index:9;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:in .25s}
+@keyframes in{from{transform:translateY(12px);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="gate">
+    <h1>Every tap cuts a tonne.</h1>
+    <p>Pick your city. Its role comes from public data, not from us: industrial cities cut emissions, coastal cities build protection, and some do both.</p>
+    <select id="countrySel"></select>
+    <button class="btn" id="startBtn">Play as this city</button>
+    <div class="why">No account, no name, no location tracking. A random device ID stores your progress. Pilot: Korean cities first. Countries come next.</div>
+  </div>
+
+  <header>
+    <div class="brand">YOUTH LEADER</div>
+    <div class="chip" id="chip"><span class="dot"></span><span id="chipTxt"></span></div>
+  </header>
+
+  <div id="scene">
+    <svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <g id="city">
+        <rect x="30" y="150" width="46" height="60" fill="#3d4a55"/>
+        <rect x="90" y="120" width="60" height="90" fill="#4a5966"/>
+        <rect x="170" y="140" width="40" height="70" fill="#3d4a55"/>
+        <rect x="225" y="105" width="70" height="105" fill="#56677a"/>
+        <rect x="310" y="150" width="50" height="60" fill="#3d4a55"/>
+        <rect x="375" y="130" width="30" height="80" fill="#4a5966"/>
+        <rect x="0" y="210" width="420" height="20" fill="#2b3640"/>
+        <g id="stacks">
+          <rect class="stack" x="60" y="95" width="10" height="60" fill="#6b5a45"/>
+          <rect class="stack" x="150" y="80" width="10" height="45" fill="#6b5a45"/>
+          <rect class="stack" x="300" y="70" width="10" height="40" fill="#6b5a45"/>
+          <rect class="stack" x="352" y="100" width="10" height="55" fill="#6b5a45"/>
+        </g>
+        <g id="turbines" opacity="0">
+          <g transform="translate(65,110)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+          <g transform="translate(155,95)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+          <g transform="translate(305,85)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+        </g>
+        <g id="shieldWall" opacity="0"><rect x="0" y="222" width="420" height="10" fill="#8fb3c9"/><rect x="0" y="219" width="420" height="3" fill="#dbe9f1"/></g>
+      </g>
+    </svg>
+    <div id="smog"></div>
+    <div id="wave"></div>
+    <div id="hint">Tap the city to shut a chimney</div>
+  </div>
+
+  <div id="meters">
+    <div class="meter"><small>Today's emissions left</small><b id="tons">0 t</b><div class="bar"><i id="tonsBar"></i></div></div>
+    <div class="meter"><small>Coins</small><b id="coins">0</b><small id="streak"></small></div>
+  </div>
+  <div id="ticker"></div>
+
+  <nav>
+    <button class="on" data-tab="cut">Cut</button>
+    <button data-tab="support">Support</button>
+    <button data-tab="rank">Ranking</button>
+  </nav>
+
+  <section id="cut" class="on">
+    <p class="note">Upgrades cut emissions for you while you're away. Real cities do the same: one bus line replaces hundreds of cars every day.</p>
+    <div id="upgrades"></div>
+  </section>
+
+  <section id="support">
+    <p class="note">Coins leave your city. Send them to a coastal city to build its shield, or to an industrial city to speed its clean-up. Support given counts in the ranking as much as tonnes cut.</p>
+    <div id="supportList"></div>
+  </section>
+
+  <section id="rank">
+    <p class="note">Score = tonnes cut per person + coins given. A small city can lead. A bot farm cannot.</p>
+    <div id="rankList"></div>
+    <div class="row" style="margin-top:12px"><div><div class="t">Ad revenue dashboard</div><div class="d">Every rebuild ad becomes real money on a public ledger, donated to the city players chose.</div></div><b id="ledger">$0.00</b></div>
+  </section>
+
+  <div id="toast" class="toast" style="display:none"></div>
+</div>
+
+<script>
+/* ---------- data (sample; production pulls from a server) ---------- */
+// role: E = high-emission, R = disaster-risk, B = both. base = starting daily tonnes (relative scale)
+// ---- PILOT MODE: Korean cities. Switch REGIONS to COUNTRIES_GLOBAL when going global (see HANDOVER.md) ----
+const REGIONS_KOREA = [
+ {c:"ULS",n:"Ulsan",role:"B",base:900},
+ {c:"POH",n:"Pohang",role:"B",base:700},
+ {c:"YEO",n:"Yeosu",role:"B",base:650},
+ {c:"INC",n:"Incheon",role:"E",base:800},
+ {c:"SEO",n:"Seoul",role:"E",base:850},
+ {c:"DAE",n:"Daegu",role:"E",base:500},
+ {c:"BUS",n:"Busan",role:"R",base:300},
+ {c:"GAN",n:"Gangneung",role:"R",base:80},
+ {c:"SOK",n:"Sokcho",role:"R",base:60},
+ {c:"JEJ",n:"Jeju",role:"R",base:90},
+ {c:"TON",n:"Tongyeong",role:"R",base:50},
+ {c:"MOK",n:"Mokpo",role:"R",base:70},
+];
+const COUNTRIES_GLOBAL = [
+ {c:"KR",n:"Korea",role:"B",base:900,tz:["Asia/Seoul"]},
+ {c:"JP",n:"Japan",role:"B",base:850,tz:["Asia/Tokyo"]},
+ {c:"US",n:"United States",role:"E",base:1500,tz:["America/New_York","America/Chicago","America/Denver","America/Los_Angeles"]},
+ {c:"CN",n:"China",role:"B",base:1400,tz:["Asia/Shanghai"]},
+ {c:"IN",n:"India",role:"B",base:700,tz:["Asia/Kolkata"]},
+ {c:"DE",n:"Germany",role:"E",base:800,tz:["Europe/Berlin"]},
+ {c:"AU",n:"Australia",role:"E",base:1100,tz:["Australia/Sydney"]},
+ {c:"NP",n:"Nepal",role:"R",base:60,tz:["Asia/Kathmandu"]},
+ {c:"BD",n:"Bangladesh",role:"R",base:80,tz:["Asia/Dhaka"]},
+ {c:"PH",n:"Philippines",role:"R",base:120,tz:["Asia/Manila"]},
+ {c:"ID",n:"Indonesia",role:"B",base:400,tz:["Asia/Jakarta"]},
+ {c:"VN",n:"Viet Nam",role:"R",base:250,tz:["Asia/Ho_Chi_Minh"]},
+ {c:"FJ",n:"Fiji",role:"R",base:40,tz:["Pacific/Fiji"]},
+ {c:"MV",n:"Maldives",role:"R",base:30,tz:["Indian/Maldives"]},
+];
+const COUNTRIES = REGIONS_KOREA;
+const ROLE_LABEL={E:"High-emission",R:"Disaster-risk",B:"Emits & at risk"};
+const UPGRADES=[
+ {id:"bus",n:"Bus line",d:"Cuts 1 t / sec",cost:40,rate:1},
+ {id:"solar",n:"Rooftop solar",d:"Cuts 3 t / sec",cost:150,rate:3},
+ {id:"wind",n:"Wind farm",d:"Cuts 8 t / sec, turns a chimney into a turbine",cost:500,rate:8},
+ {id:"grid",n:"Clean grid",d:"Cuts 20 t / sec",cost:1500,rate:20},
+];
+const FACTS=[
+ "Sea level has risen about 20 cm since 1900. Every centimetre pushes a tsunami further inland.",
+ "The countries most exposed to climate disasters emit under 1% of global CO2.",
+ "A single city bus can replace around 40 private cars on the road.",
+ "Tsunami early-warning speakers cost less than one day of a mid-size coal plant's fuel.",
+ "Mangrove belts can cut wave energy by more than half before it reaches shore.",
+ "In 2007, over a million volunteers cleaned Korea's Taean coast with no one ordering them to.",
+ "UN climate agreements have no enforcement power. Compliance is voluntary. So is this game.",
+ "Industrial ports are the most exposed part of a coastline and the most expensive to lose.",
+];
+
+/* ---------- state ---------- */
+const DAY_CAP=600;                // tonnes per day per player (anti-bot, keeps it a daily habit)
+let S={uid:null,c:null,tons:0,coins:0,cut:0,given:0,upg:{},day:null,streak:0,taps:0,ledger:0,shield:{}};
+const store={
+  get(){try{return JSON.parse(localStorage.getItem("yl")||"null")}catch(e){return null}},
+  set(v){try{localStorage.setItem("yl",JSON.stringify(v))}catch(e){}}
+};
+function today(){return new Date().toISOString().slice(0,10)}
+function uid(){return "d"+Math.random().toString(36).slice(2,10)}
+
+/* ---------- simulated world (seeded by date so it looks alive and consistent) ---------- */
+function seed(str){let h=0;for(const ch of str)h=(h*31+ch.charCodeAt(0))>>>0;return()=>{h=(h*1664525+1013904223)>>>0;return h/4294967296}}
+let WORLD={};
+function buildWorld(){
+  const r=seed(today());
+  COUNTRIES.forEach(k=>{WORLD[k.c]={cut:Math.round(r()*300)/10,given:Math.round(r()*120),shield:Math.round(r()*70)}});
+}
+
+/* ---------- init ---------- */
+const $=s=>document.querySelector(s);
+const sel=$("#countrySel");
+COUNTRIES.forEach(k=>{const o=document.createElement("option");o.value=k.c;o.textContent=`${k.n} — ${ROLE_LABEL[k.role]}`;sel.appendChild(o)});
+(function guessCountry(){
+  // Prototype: guess from device time zone. Production: server-side geo-IP, never GPS.
+  let tz="";try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||""}catch(e){}
+  const k=COUNTRIES.find(x=>x.tz&&x.tz.includes(tz));
+  sel.value=k?k.c:"ULS";
+})();
+const saved=store.get();
+if(saved&&saved.c){sel.value=saved.c;$("#startBtn").textContent="Continue as "+COUNTRIES.find(x=>x.c===saved.c).n}
+$("#startBtn").onclick=()=>{
+  const c=sel.value;
+  if(saved&&saved.c===c){S=saved}else{S.uid=uid();S.c=c}
+  const k=me();
+  if(S.day!==today()){
+    const wasYesterday=S.day&&(new Date(today())-new Date(S.day))/864e5===1;
+    S.streak=wasYesterday?S.streak+1:(S.day?1:1);
+    S.day=today();S.tons=Math.min(DAY_CAP,k.base);S.taps=0;
+  }
+  buildWorld();
+  $("#gate").style.display="none";
+  render();fact("Your role: "+ROLE_LABEL[k.role]+". "+(k.role==="E"?"Cut tonnes, then send coins where the waves land.":k.role==="R"?"Build your shield with coins, yours or a stranger's.":"You cut and you build. Most countries do."));
+  setInterval(tick,1000);setInterval(disaster,45000);
+};
+function me(){return COUNTRIES.find(x=>x.c===S.c)}
+
+/* ---------- core loop ---------- */
+$("#scene").addEventListener("pointerdown",e=>{
+  if(S.tons<=0){toast("Today's emissions are gone. Come back tomorrow, or send coins.");return}
+  const amt=1;S.tons-=amt;S.cut+=amt;S.coins+=1;S.taps++;
+  const r=$("#scene").getBoundingClientRect();
+  puff(e.clientX-r.left,e.clientY-r.top);
+  if(S.taps%25===0)fact(FACTS[(S.taps/25-1)%FACTS.length]);
+  render();save();
+});
+function tick(){
+  let rate=0;UPGRADES.forEach(u=>rate+=(S.upg[u.id]||0)*u.rate);
+  if(rate>0&&S.tons>0){const a=Math.min(rate,S.tons);S.tons-=a;S.cut+=a;S.coins+=a}
+  // world moves a little
+  for(const c in WORLD){WORLD[c].cut+=Math.random()*0.05}
+  render();
+}
+function disaster(){
+  const risk=COUNTRIES.filter(k=>k.role!=="E");
+  const k=risk[Math.floor(Math.random()*risk.length)];
+  const sh=k.c===S.c?(S.shield.self||0):WORLD[k.c].shield;
+  const scene=$("#scene");
+  if(k.c===S.c){$("#wave").classList.add("on");setTimeout(()=>$("#wave").classList.remove("on"),2000)}
+  if(sh>=50){ticker(`Wave hit ${k.n}. Shield held. ${sh}% funded.`,"good")}
+  else{
+    ticker(`Wave hit ${k.n}. Shield only ${sh}%. Rebuild cost ${k.c===S.c?"20% of your coins":"was paid by no one"}.`,"bad");
+    if(k.c===S.c){S.coins=Math.floor(S.coins*0.8);scene.classList.add("shake");setTimeout(()=>scene.classList.remove("shake"),600);
+      toast("Your city was hit. Watch an ad to rebuild it free — the ad money goes to the public ledger, not to us.",()=>{S.coins=Math.round(S.coins/0.8);S.ledger+=0.02;render();save()},"Watch ad (simulated)")}
+  }
+  render();
+}
+
+/* ---------- render ---------- */
+function render(){
+  const k=me();
+  $("#chip").className="chip role-"+k.role;$("#chipTxt").textContent=k.n;
+  $("#tons").textContent=Math.round(S.tons)+" t";
+  $("#tonsBar").style.width=(100-100*S.tons/Math.min(DAY_CAP,k.base))+"%";
+  $("#coins").textContent=Math.floor(S.coins);
+  $("#streak").textContent=S.streak>1?`${S.streak}-day streak`:"";
+  const f=S.tons/Math.min(DAY_CAP,k.base);
+  $("#smog").style.opacity=Math.max(0,f*0.95);
+  $("#turbines").setAttribute("opacity",S.upg.wind?1:0);
+  document.querySelectorAll(".stack").forEach((s,i)=>s.style.opacity=(S.upg.wind&&i<3)?0:1);
+  $("#shieldWall").setAttribute("opacity",(S.shield.self||0)>=50?1:0);
+  $("#hint").textContent=S.tons<=0?"Clean air. Now go to Support.":"Tap the city to shut a chimney";
+  $("#ledger").textContent="$"+S.ledger.toFixed(2);
+  // upgrades
+  $("#upgrades").innerHTML=UPGRADES.map(u=>{const n=S.upg[u.id]||0;const cost=Math.round(u.cost*Math.pow(1.6,n));
+    return `<div class="row"><div><div class="t">${u.n}${n?` <span class="tag">×${n}</span>`:""}</div><div class="d">${u.d}</div></div><button class="btn coin" ${S.coins<cost?"disabled":""} onclick="buy('${u.id}',${cost})">${cost}</button></div>`}).join("");
+  // support
+  const targets=COUNTRIES.filter(x=>x.c!==S.c);
+  const selfRow=k.role!=="E"?`<div class="row"><div><div class="t">Your own shield <span class="tag R">${S.shield.self||0}%</span></div><div class="d">Seawall + early warning. Holds at 50%.</div></div><button class="btn" ${S.coins<20?"disabled":""} onclick="give('self')">20 → +5%</button></div>`:"";
+  $("#supportList").innerHTML=selfRow+targets.map(x=>{const w=WORLD[x.c];const isR=x.role!=="E";
+    return `<div class="row"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d">${isR?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`}</div></div><button class="btn" ${S.coins<20?"disabled":""} onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button></div>`}).join("");
+  // ranking
+  const rows=COUNTRIES.map(x=>{const mine=x.c===S.c;const cut=mine?S.cut/k.base*100:WORLD[x.c].cut;const given=mine?S.given:WORLD[x.c].given;return{x,score:cut+given*0.5,me:mine}}).sort((a,b)=>b.score-a.score);
+  $("#rankList").innerHTML=rows.map((r,i)=>`<div class="rank${r.me?" me":""}"><span class="n">${i+1}</span><span>${r.x.n}<span class="tag ${r.x.role}">${ROLE_LABEL[r.x.role]}</span></span><span class="v">${r.score.toFixed(1)}</span></div>`).join("");
+}
+function buy(id,cost){if(S.coins<cost)return;S.coins-=cost;S.upg[id]=(S.upg[id]||0)+1;render();save();if(id==="wind"&&S.upg.wind===1)toast("Three chimneys became turbines. The sky clears a little faster now.")}
+function give(c){if(S.coins<20)return;S.coins-=20;S.given+=20;
+  if(c==="self"){S.shield.self=Math.min(100,(S.shield.self||0)+5)}
+  else{const x=COUNTRIES.find(y=>y.c===c);if(x.role!=="E")WORLD[c].shield=Math.min(100,WORLD[c].shield+5);else WORLD[c].cut+=2;
+    if((WORLD[c].shield===50&&x.role!=="E"))toast(`${x.n}'s shield just reached 50%. The next wave there will hold.`)}
+  render();save()}
+function save(){store.set(S)}
+
+/* ---------- fx ---------- */
+function puff(x,y){const p=document.createElement("div");p.className="puff";p.style.left=x-9+"px";p.style.top=y-9+"px";$("#scene").appendChild(p);setTimeout(()=>p.remove(),900);
+  const q=document.createElement("div");q.className="pop";q.textContent="−1 t";q.style.left=x+10+"px";q.style.top=y-20+"px";$("#scene").appendChild(q);setTimeout(()=>q.remove(),700)}
+let tt;function toast(msg,action,label){const t=$("#toast");t.style.display="block";t.innerHTML=msg+(action?` <button class="btn coin" style="margin-top:8px;display:block" id="ta">${label}</button>`:"");
+  if(action)$("#ta").onclick=()=>{action();t.style.display="none"};clearTimeout(tt);tt=setTimeout(()=>t.style.display="none",action?12000:4500)}
+function fact(m){toast(m)}
+function ticker(m,cls){const t=$("#ticker");t.textContent=m;t.className=cls||""}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab))});
+document.querySelectorAll(".rotor").forEach((r,i)=>{r.style.transformOrigin="0 0";r.animate([{transform:"rotate(0deg)"},{transform:"rotate(360deg)"}],{duration:2500+i*400,iterations:Infinity})});
+</script>
+</body>
+</html>
