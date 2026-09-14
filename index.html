@@ -10,9 +10,9 @@
   --ink:#16232E; --paper:#EEF3F5; --mist:#D6E0E6; --coin:#F2B134; --alert:#E05A47; --leaf:#4E9F5C;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{font-family:"Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--deep);color:var(--ink);display:flex;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
-#app{width:100%;max-width:420px;min-height:100vh;background:var(--paper);display:flex;flex-direction:column;position:relative;overflow:hidden}
+html,body{min-height:100%;overscroll-behavior:none}
+body{font-family:"Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--deep);color:var(--ink);display:flex;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#app{width:100%;max-width:420px;min-height:100vh;min-height:100dvh;background:var(--paper);display:flex;flex-direction:column;position:relative;overflow:hidden;padding-bottom:env(safe-area-inset-bottom)}
 
 /* ---------- top bar ---------- */
 header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;gap:8px}
@@ -22,7 +22,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .role-E .dot{background:var(--smog)} .role-R .dot{background:var(--sea)} .role-B .dot{background:linear-gradient(90deg,var(--smog) 50%,var(--sea) 50%)}
 
 /* ---------- scene ---------- */
-#scene{position:relative;height:300px;overflow:hidden;cursor:pointer;background:linear-gradient(var(--sky),#c9e7f5 70%,var(--sea) 70%,var(--sea))}
+/* 300px is half of a small phone: the first upgrade fell below the fold and nobody scrolled.
+   svh is the toolbar-visible height, so this does NOT resize while the toolbar hides on scroll.
+   The 240px floor is not arbitrary: the SVG slices from the bottom, and below it the chimney
+   tops (viewBox y=70) get cut off. Never crop the chimneys -- they are what you tap. */
+#scene{position:relative;height:300px;height:clamp(240px,40svh,300px);overflow:hidden;cursor:pointer;touch-action:manipulation;background:linear-gradient(var(--sky),#c9e7f5 70%,var(--sea) 70%,var(--sea))}
 #scene svg{position:absolute;inset:0;width:100%;height:100%}
 #smog{position:absolute;inset:0;background:linear-gradient(var(--smog),rgba(138,122,90,.55) 60%,transparent);pointer-events:none;transition:opacity .35s}
 #scene.shake{animation:shake .5s}
@@ -73,8 +77,8 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
 #gate select{width:100%;padding:12px;border-radius:12px;border:0;font-size:16px;margin-bottom:12px;background:#fff;color:var(--ink)}
 #gate .btn{width:100%;padding:14px;font-size:16px;background:var(--coin);color:#3d2a00}
 #gate .why{font-size:12.5px;color:#8fa6ba;margin-top:14px;line-height:1.5}
-.toast{position:absolute;left:16px;right:16px;bottom:18px;background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;z-index:9;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:in .25s}
-@keyframes in{from{transform:translateY(12px);opacity:0}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:388px;bottom:calc(18px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;z-index:9;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:in .25s}
+@keyframes in{from{transform:translate(-50%,12px);opacity:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -214,7 +218,9 @@ const store={
   get(){try{return JSON.parse(localStorage.getItem("yl")||"null")}catch(e){return null}},
   set(v){try{localStorage.setItem("yl",JSON.stringify(v))}catch(e){}}
 };
-function today(){return new Date().toISOString().slice(0,10)}
+// The player's calendar day, not UTC's. On UTC the day flipped at 09:00 in Korea and a
+// session after midnight still counted as yesterday, so the streak never moved.
+function today(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 function uid(){return "d"+Math.random().toString(36).slice(2,10)}
 
 /* ---------- simulated world (seeded by date so it looks alive and consistent) ---------- */
@@ -236,22 +242,29 @@ COUNTRIES.forEach(k=>{const o=document.createElement("option");o.value=k.c;o.tex
   sel.value=k?k.c:"ULS";
 })();
 const saved=store.get();
-if(saved&&saved.c){sel.value=saved.c;$("#startBtn").textContent="Continue as "+COUNTRIES.find(x=>x.c===saved.c).n}
+// A save can name a city this build does not have (older version, or global mode). Ignore it, never crash.
+const savedCity=saved&&COUNTRIES.find(x=>x.c===saved.c);
+if(savedCity){sel.value=saved.c;$("#startBtn").textContent="Continue as "+savedCity.n}
 $("#startBtn").onclick=()=>{
   const c=sel.value;
-  if(saved&&saved.c===c){S=saved}else{S.uid=uid();S.c=c}
+  if(savedCity&&saved.c===c){S=Object.assign({},S,saved,{upg:saved.upg||{},shield:saved.shield||{}})}else{S.uid=uid();S.c=c}
   const k=me();
-  if(S.day!==today()){
-    const wasYesterday=S.day&&(new Date(today())-new Date(S.day))/864e5===1;
-    S.streak=wasYesterday?S.streak+1:(S.day?1:1);
-    S.day=today();S.tons=Math.min(DAY_CAP,k.base);S.taps=0;
-  }
+  rollDay();
   buildWorld();
   $("#gate").style.display="none";
+  lastTick=Date.now();
   render();fact("Your role: "+ROLE_LABEL[k.role]+". "+(k.role==="E"?"Cut tonnes, then send coins where the waves land.":k.role==="R"?"Build your shield with coins, yours or a stranger's.":"You cut and you build. Most countries do."));
   setInterval(tick,1000);setInterval(disaster,45000);
 };
 function me(){return COUNTRIES.find(x=>x.c===S.c)}
+// A phone keeps the tab alive for days. The day has to roll over without a reload.
+function rollDay(){
+  if(S.day===today())return false;
+  const wasYesterday=S.day&&(new Date(today())-new Date(S.day))/864e5===1;
+  S.streak=wasYesterday?S.streak+1:1;
+  S.day=today();S.tons=Math.min(DAY_CAP,me().base);S.taps=0;
+  return true;
+}
 
 /* ---------- core loop ---------- */
 $("#scene").addEventListener("pointerdown",e=>{
@@ -260,15 +273,23 @@ $("#scene").addEventListener("pointerdown",e=>{
   const r=$("#scene").getBoundingClientRect();
   puff(e.clientX-r.left,e.clientY-r.top);
   if(S.taps%25===0)fact(FACTS[(S.taps/25-1)%FACTS.length]);
-  render();save();
+  renderTop();affordable();save();
 });
+let lastTick=Date.now();
 function tick(){
+  // Timers stop while the screen is off. Pay out the real elapsed time instead of 1 s,
+  // so "upgrades cut while you're away" is true on a phone. The daily cap still bounds it.
+  const now=Date.now();
+  const dt=Math.max(0,Math.min(86400,Math.round((now-lastTick)/1000)));
+  lastTick=now;
+  if(rollDay())ticker(`New day. Emissions are back. ${S.streak}-day streak.`,"good");
   let rate=0;UPGRADES.forEach(u=>rate+=(S.upg[u.id]||0)*u.rate);
-  if(rate>0&&S.tons>0){const a=Math.min(rate,S.tons);S.tons-=a;S.cut+=a;S.coins+=a}
+  if(rate>0&&S.tons>0&&dt>0){const a=Math.min(rate*dt,S.tons);S.tons-=a;S.cut+=a;S.coins+=a;save()}
   // world moves a little
   for(const c in WORLD){WORLD[c].cut+=Math.random()*0.05}
-  render();
+  renderTop();renderLists();
 }
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&S.c)tick()});
 function disaster(){
   const risk=COUNTRIES.filter(k=>k.role!=="E");
   const k=risk[Math.floor(Math.random()*risk.length)];
@@ -281,11 +302,14 @@ function disaster(){
     if(k.c===S.c){S.coins=Math.floor(S.coins*0.8);scene.classList.add("shake");setTimeout(()=>scene.classList.remove("shake"),600);
       toast("Your city was hit. Watch an ad to rebuild it free — the ad money goes to the public ledger, not to us.",()=>{S.coins=Math.round(S.coins/0.8);S.ledger+=0.02;render();save()},"Watch ad (simulated)")}
   }
-  render();
+  renderTop();renderLists();
 }
 
 /* ---------- render ---------- */
-function render(){
+// Split on purpose: a tap only touches the scene and the meters. Rebuilding the three
+// lists on every tap made taps feel slow on cheap Android phones.
+function render(){renderTop();renderLists(true)}
+function renderTop(){
   const k=me();
   $("#chip").className="chip role-"+k.role;$("#chipTxt").textContent=k.n;
   $("#tons").textContent=Math.round(S.tons)+" t";
@@ -299,25 +323,53 @@ function render(){
   $("#shieldWall").setAttribute("opacity",(S.shield.self||0)>=50?1:0);
   $("#hint").textContent=S.tons<=0?"Clean air. Now go to Support.":"Tap the city to shut a chimney";
   $("#ledger").textContent="$"+S.ledger.toFixed(2);
+}
+let listSig="",worldStamp=0;
+function renderLists(force){
+  const k=me();
+  const tab=$("nav button.on").dataset.tab;
+  // Coins are deliberately out of this signature. They move every second once an upgrade is
+  // running, and rebuilding a list replaces the very button a finger is already down on --
+  // the browser then fires the click on the parent and the tap is lost. Prices and labels
+  // only change when something structural does; affordability is synced in place below.
+  const sig=[tab,JSON.stringify(S.upg),S.given,S.shield.self||0,worldStamp,tab==="rank"?Math.round(S.cut):0].join("|");
+  if(force||sig!==listSig){
+  listSig=sig;
+  if(tab==="cut"){
   // upgrades
   $("#upgrades").innerHTML=UPGRADES.map(u=>{const n=S.upg[u.id]||0;const cost=Math.round(u.cost*Math.pow(1.6,n));
-    return `<div class="row"><div><div class="t">${u.n}${n?` <span class="tag">×${n}</span>`:""}</div><div class="d">${u.d}</div></div><button class="btn coin" ${S.coins<cost?"disabled":""} onclick="buy('${u.id}',${cost})">${cost}</button></div>`}).join("");
-  // support
+    return `<div class="row"><div><div class="t">${u.n}${n?` <span class="tag">×${n}</span>`:""}</div><div class="d">${u.d}</div></div><button class="btn coin" data-cost="${cost}" onclick="buy('${u.id}',${cost})">${cost}</button></div>`}).join("");
+  }
+  else if(tab==="support"){
   const targets=COUNTRIES.filter(x=>x.c!==S.c);
-  const selfRow=k.role!=="E"?`<div class="row"><div><div class="t">Your own shield <span class="tag R">${S.shield.self||0}%</span></div><div class="d">Seawall + early warning. Holds at 50%.</div></div><button class="btn" ${S.coins<20?"disabled":""} onclick="give('self')">20 → +5%</button></div>`:"";
+  const selfRow=k.role!=="E"?`<div class="row"><div><div class="t">Your own shield <span class="tag R">${S.shield.self||0}%</span></div><div class="d">Seawall + early warning. Holds at 50%.</div></div><button class="btn" data-cost="20" onclick="give('self')">20 → +5%</button></div>`:"";
   $("#supportList").innerHTML=selfRow+targets.map(x=>{const w=WORLD[x.c];const isR=x.role!=="E";
-    return `<div class="row"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d">${isR?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`}</div></div><button class="btn" ${S.coins<20?"disabled":""} onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button></div>`}).join("");
-  // ranking
+    return `<div class="row"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d">${isR?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`}</div></div><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button></div>`}).join("");
+  }
+  else{
   const rows=COUNTRIES.map(x=>{const mine=x.c===S.c;const cut=mine?S.cut/k.base*100:WORLD[x.c].cut;const given=mine?S.given:WORLD[x.c].given;return{x,score:cut+given*0.5,me:mine}}).sort((a,b)=>b.score-a.score);
   $("#rankList").innerHTML=rows.map((r,i)=>`<div class="rank${r.me?" me":""}"><span class="n">${i+1}</span><span>${r.x.n}<span class="tag ${r.x.role}">${ROLE_LABEL[r.x.role]}</span></span><span class="v">${r.score.toFixed(1)}</span></div>`).join("");
+  }
+  }
+  affordable();
 }
+// Grey a button out or bring it back without replacing the node.
+function affordable(){document.querySelectorAll("section.on .btn[data-cost]").forEach(b=>{b.disabled=S.coins<+b.dataset.cost})}
 function buy(id,cost){if(S.coins<cost)return;S.coins-=cost;S.upg[id]=(S.upg[id]||0)+1;render();save();if(id==="wind"&&S.upg.wind===1)toast("Three chimneys became turbines. The sky clears a little faster now.")}
 function give(c){if(S.coins<20)return;S.coins-=20;S.given+=20;
   if(c==="self"){S.shield.self=Math.min(100,(S.shield.self||0)+5)}
   else{const x=COUNTRIES.find(y=>y.c===c);if(x.role!=="E")WORLD[c].shield=Math.min(100,WORLD[c].shield+5);else WORLD[c].cut+=2;
     if((WORLD[c].shield===50&&x.role!=="E"))toast(`${x.n}'s shield just reached 50%. The next wave there will hold.`)}
-  render();save()}
-function save(){store.set(S)}
+  worldStamp++;render();save()}
+// localStorage writes are synchronous. One per tap stutters on a phone, so batch them
+// and always flush when the browser is backgrounded or the tab is closed.
+// Both guard on S.c: before the player presses Play, S is still the blank starting object.
+// Opening the link and closing the tab from the gate screen must not overwrite a real save.
+let saveT=null;
+function save(){if(S.c&&saveT===null)saveT=setTimeout(flush,600)}
+function flush(){clearTimeout(saveT);saveT=null;if(S.c)store.set(S)}
+addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flush()});
+addEventListener("pagehide",flush);
 
 /* ---------- fx ---------- */
 function puff(x,y){const p=document.createElement("div");p.className="puff";p.style.left=x-9+"px";p.style.top=y-9+"px";$("#scene").appendChild(p);setTimeout(()=>p.remove(),900);
@@ -326,7 +378,7 @@ let tt;function toast(msg,action,label){const t=$("#toast");t.style.display="blo
   if(action)$("#ta").onclick=()=>{action();t.style.display="none"};clearTimeout(tt);tt=setTimeout(()=>t.style.display="none",action?12000:4500)}
 function fact(m){toast(m)}
 function ticker(m,cls){const t=$("#ticker");t.textContent=m;t.className=cls||""}
-document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab))});
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab));if(S.c)renderLists(true)});
 document.querySelectorAll(".rotor").forEach((r,i)=>{r.style.transformOrigin="0 0";r.animate([{transform:"rotate(0deg)"},{transform:"rotate(360deg)"}],{duration:2500+i*400,iterations:Infinity})});
 </script>
 </body>
