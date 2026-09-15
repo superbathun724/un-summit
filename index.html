@@ -247,16 +247,38 @@ const ROLE_LABEL={E:"High-emission",R:"Disaster-risk",B:"Emits & at risk"};
 // what it bought in either mode and both ladders keep running while it is away.
 const UP_CUT=[
  {id:"bus",n:"Bus line",d:"Cuts 1 t / sec",cost:40,rate:1},
- {id:"solar",n:"Rooftop solar",d:"Cuts 3 t / sec",cost:150,rate:3},
+ {id:"solar",n:"Public rooftop solar",d:"Cuts 3 t / sec",cost:150,rate:3},
  {id:"wind",n:"Wind farm",d:"Cuts 8 t / sec, turns a chimney into a turbine",cost:500,rate:8},
  {id:"grid",n:"Clean grid",d:"Cuts 20 t / sec",cost:1500,rate:20},
 ];
 const UP_DEF=[
  {id:"sandbag",n:"Sandbag depot",d:"Builds 1 defence / sec",cost:40,rate:1},
- {id:"siren",n:"Warning siren",d:"Builds 3 defence / sec",cost:150,rate:3},
+ {id:"siren",n:"Siren network",d:"Builds 3 defence / sec",cost:150,rate:3},
  {id:"mangrove",n:"Mangrove belt",d:"Builds 8 defence / sec",cost:500,rate:8},
  {id:"seawall",n:"Seawall section",d:"Builds 20 defence / sec",cost:1500,rate:20},
 ];
+// What each city would actually build, in its own geography and its own industry. Public works
+// only: a council budget line, never a household habit. Nobody is asked to take the bus here --
+// the city lays the bus line. Costs and rates are shared; only the name is local, so the ladder
+// stays balanced and a player switching cities is not learning a new game.
+// A region with no entry falls back to the generic names above. That is what global mode uses.
+const LOCAL={
+ ULS:{cut:["Industrial belt bus line","Refinery rooftop solar","Floating offshore wind","Complex-wide clean grid"],
+      def:["Taehwa river levee","Industrial zone sirens","Ulsan bay tidal flats","Onsan port storm barrier"]},
+ POH:{cut:["Steelworks shuttle line","Mill roof solar array","Yeongil bay wind farm","Electric arc furnace grid"],
+      def:["Naengcheon floodwall","Quake and flood sirens","Yeongil bay dune belt","Steelworks storm gate"]},
+ YEO:{cut:["Complex shuttle line","Plant roof solar array","Yeosu offshore wind","Complex clean grid"],
+      def:["Island village seawall","Coastal siren network","Gamak bay tidal flats","Yeosu port storm barrier"]},
+ INC:{cut:["Port shuttle bus line","Warehouse roof solar","Incheon offshore wind","Metropolitan clean grid"]},
+ SEO:{cut:["Bus rapid transit line","Public building solar","Wind power purchase deal","Clean district heating"]},
+ DAE:{cut:["Urban rail feeder line","Solar City rooftop array","Highland wind farm","Industrial park clean grid"]},
+ BUS:{def:["Marine City storm drains","Port tsunami sirens","Nakdong estuary flats","Busan port storm barrier"]},
+ GAN:{def:["Gyeongpo drainage works","East coast tsunami sirens","Coastal pine windbreak","Anmok shore revetment"]},
+ SOK:{def:["Fishing port drainage","Tsunami siren tower","Cheongchoho lagoon buffer","Sokcho port breakwater"]},
+ JEJ:{def:["Village stone wall repair","Island typhoon sirens","Coastal dune and pine belt","Harbour wave breakers"]},
+ TON:{def:["Island jetty repair","Island siren relay","Hansan bay tidal flats","Fishing port breakwater"]},
+ MOK:{def:["Low-lying district pumps","High-tide warning sirens","Estuary tidal flat belt","Yeongsan floodgate"]},
+};
 const FACTS=[
  "Sea level has risen about 20 cm since 1900. Every centimetre pushes a tsunami further inland.",
  "The countries most exposed to climate disasters emit under 1% of global CO2.",
@@ -346,6 +368,7 @@ function me(){return COUNTRIES.find(x=>x.c===S.c)}
 // The role decides what a tap means. Only a "both" city gets to choose.
 function mode(){const r=me().role;return r==="E"?"cut":r==="R"?"def":(S.mode==="def"?"def":"cut")}
 function upSet(){return mode()==="def"?UP_DEF:UP_CUT}
+function upName(u,i){const L=LOCAL[S.c],a=L&&L[mode()];return (a&&a[i])||u.n}
 // Defence points buy shield percent. Returns how much today's budget actually accepted.
 function addDef(n){
   n=Math.min(n,DEF_CAP-S.def);
@@ -466,8 +489,8 @@ function renderLists(force){
   $("#cityNote").textContent=mode()==="def"
     ?"Upgrades keep building while you're away. A siren and a mangrove belt work at 3 a.m. too."
     :"Upgrades cut emissions for you while you're away. Real cities do the same: one bus line replaces hundreds of cars every day.";
-  $("#upgrades").innerHTML=upSet().map(u=>{const n=S.upg[u.id]||0;const cost=Math.round(u.cost*Math.pow(1.6,n));
-    return `<div class="row"><div><div class="t">${u.n}${n?` <span class="tag">×${n}</span>`:""}</div><div class="d">${u.d}</div></div><button class="btn coin" data-cost="${cost}" onclick="buy('${u.id}',${cost})">${cost}</button></div>`}).join("");
+  $("#upgrades").innerHTML=upSet().map((u,i)=>{const n=S.upg[u.id]||0;const cost=Math.round(u.cost*Math.pow(1.6,n));
+    return `<div class="row"><div><div class="t">${upName(u,i)}${n?` <span class="tag">×${n}</span>`:""}</div><div class="d">${u.d}</div></div><button class="btn coin" data-cost="${cost}" onclick="buy('${u.id}',${cost})">${cost}</button></div>`}).join("");
   }
   else if(tab==="support"){
   const targets=COUNTRIES.filter(x=>x.c!==S.c&&!emgFind(x.c));
