@@ -16,8 +16,13 @@ body{font-family:"Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-ser
 
 /* ---------- top bar ---------- */
 header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;gap:8px}
-.brand{font-weight:800;letter-spacing:-.02em;font-size:18px}
-.chip{display:flex;align-items:center;gap:6px;background:var(--mist);border-radius:999px;padding:5px 10px 5px 8px;font-size:13px;font-weight:600;cursor:pointer}
+.brand{font-weight:800;letter-spacing:-.02em;font-size:16px;white-space:nowrap}
+.hdr{display:flex;align-items:center;gap:6px;min-width:0}
+#chipTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Coins live in the bar, not on the city page: you spend them on the Support page,
+   and you cannot decide what to send if the number is on a screen you just left. */
+.coins{background:var(--coin);color:#3d2a00;border-radius:999px;padding:5px 11px;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.chip{display:flex;align-items:center;gap:6px;background:var(--mist);border-radius:999px;padding:5px 10px 5px 8px;font-size:12.5px;font-weight:600;cursor:pointer}
 .chip .dot{width:9px;height:9px;border-radius:50%}
 .role-E .dot{background:var(--smog)} .role-R .dot{background:var(--sea)} .role-B .dot{background:linear-gradient(90deg,var(--smog) 50%,var(--sea) 50%)}
 
@@ -52,12 +57,17 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 #modeSw button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 
 /* ---------- meters ---------- */
-#meters{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 16px 4px}
-.meter{background:#fff;border-radius:14px;padding:10px 12px}
+/* Flex, not a 2-column grid: a city with only one job shows one card and it fills the row. */
+#meters{display:flex;gap:10px;padding:12px 16px 4px}
+.meter{flex:1;min-width:0;background:#fff;border-radius:14px;padding:10px 12px}
+.meter[hidden]{display:none}
+.meter.active{outline:2px solid var(--deep)}
 .meter b{display:block;font-size:22px;letter-spacing:-.02em}
 .meter small{color:#5b6b78;font-size:12px}
+#streak{display:block;margin-top:5px}
 .bar{height:6px;background:var(--mist);border-radius:3px;margin-top:6px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--leaf);width:0;transition:width .3s}
+#mDef .bar i{background:var(--sea)}
 #ticker{margin:6px 16px 0;font-size:12.5px;color:#3c4d5a;min-height:18px}
 #ticker.bad{color:var(--alert);font-weight:600}
 #ticker.good{color:var(--leaf);font-weight:600}
@@ -70,6 +80,10 @@ nav button.alert::after{content:"";display:inline-block;width:7px;height:7px;bor
 @keyframes blip{50%{opacity:.2}}
 section{padding:12px 16px 24px;display:none}
 section.on{display:block}
+/* My City is one page: the scene, the meters and the upgrades. The scene runs edge to edge,
+   so the page itself carries no side padding and the text block below brings its own. */
+#city{padding:10px 0 0}
+.pad{padding:12px 16px 24px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:14px;padding:12px;margin-bottom:8px}
 .row .t{font-weight:700;font-size:15px}
 .row .d{font-size:12.5px;color:#5b6b78;margin-top:2px}
@@ -119,58 +133,63 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
 
   <header>
     <div class="brand">YOUTH LEADER</div>
-    <div class="chip" id="chip"><span class="dot"></span><span id="chipTxt"></span></div>
+    <div class="hdr">
+      <div class="chip" id="chip"><span class="dot"></span><span id="chipTxt"></span></div>
+      <div class="coins" id="coins">0</div>
+    </div>
   </header>
 
-  <div id="scene">
-    <svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <g id="city">
-        <rect x="30" y="150" width="46" height="60" fill="#3d4a55"/>
-        <rect x="90" y="120" width="60" height="90" fill="#4a5966"/>
-        <rect x="170" y="140" width="40" height="70" fill="#3d4a55"/>
-        <rect x="225" y="105" width="70" height="105" fill="#56677a"/>
-        <rect x="310" y="150" width="50" height="60" fill="#3d4a55"/>
-        <rect x="375" y="130" width="30" height="80" fill="#4a5966"/>
-        <rect x="0" y="210" width="420" height="20" fill="#2b3640"/>
-        <g id="stacks">
-          <rect class="stack" x="60" y="95" width="10" height="60" fill="#6b5a45"/>
-          <rect class="stack" x="150" y="80" width="10" height="45" fill="#6b5a45"/>
-          <rect class="stack" x="300" y="70" width="10" height="40" fill="#6b5a45"/>
-          <rect class="stack" x="352" y="100" width="10" height="55" fill="#6b5a45"/>
-        </g>
-        <g id="turbines" opacity="0">
-          <g transform="translate(65,110)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
-          <g transform="translate(155,95)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
-          <g transform="translate(305,85)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
-        </g>
-        <g id="shieldWall" opacity="0"><rect id="wallBody" x="0" y="222" width="420" height="10" fill="#8fb3c9"/><rect id="wallCap" x="0" y="219" width="420" height="3" fill="#dbe9f1"/></g>
-      </g>
-    </svg>
-    <div id="smog"></div>
-    <div id="wave"></div>
-    <div id="hint">Tap the city to shut a chimney</div>
-  </div>
-
-  <div id="modeSw" hidden>
-    <button data-mode="cut" class="on">Cut emissions</button>
-    <button data-mode="def">Build defence</button>
-  </div>
-
-  <div id="meters">
-    <div class="meter"><small id="mLabel">Today's emissions left</small><b id="tons">0 t</b><div class="bar"><i id="tonsBar"></i></div></div>
-    <div class="meter"><small>Coins</small><b id="coins">0</b><small id="streak"></small></div>
-  </div>
-  <div id="ticker"></div>
-
   <nav>
-    <button class="on" data-tab="cut">Cut</button>
+    <button class="on" data-tab="city">My City</button>
     <button data-tab="support">Support</button>
     <button data-tab="rank">Ranking</button>
   </nav>
 
-  <section id="cut" class="on">
-    <p class="note" id="cutNote"></p>
-    <div id="upgrades"></div>
+  <section id="city" class="on">
+    <div id="scene">
+      <svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+        <g id="cityArt">
+          <rect x="30" y="150" width="46" height="60" fill="#3d4a55"/>
+          <rect x="90" y="120" width="60" height="90" fill="#4a5966"/>
+          <rect x="170" y="140" width="40" height="70" fill="#3d4a55"/>
+          <rect x="225" y="105" width="70" height="105" fill="#56677a"/>
+          <rect x="310" y="150" width="50" height="60" fill="#3d4a55"/>
+          <rect x="375" y="130" width="30" height="80" fill="#4a5966"/>
+          <rect x="0" y="210" width="420" height="20" fill="#2b3640"/>
+          <g id="stacks">
+            <rect class="stack" x="60" y="95" width="10" height="60" fill="#6b5a45"/>
+            <rect class="stack" x="150" y="80" width="10" height="45" fill="#6b5a45"/>
+            <rect class="stack" x="300" y="70" width="10" height="40" fill="#6b5a45"/>
+            <rect class="stack" x="352" y="100" width="10" height="55" fill="#6b5a45"/>
+          </g>
+          <g id="turbines" opacity="0">
+            <g transform="translate(65,110)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+            <g transform="translate(155,95)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+            <g transform="translate(305,85)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+          </g>
+          <g id="shieldWall" opacity="0"><rect id="wallBody" x="0" y="222" width="420" height="10" fill="#8fb3c9"/><rect id="wallCap" x="0" y="219" width="420" height="3" fill="#dbe9f1"/></g>
+        </g>
+      </svg>
+      <div id="smog"></div>
+      <div id="wave"></div>
+      <div id="hint">Tap the city to shut a chimney</div>
+    </div>
+
+    <div id="modeSw" hidden>
+      <button data-mode="cut" class="on">Cut emissions</button>
+      <button data-mode="def">Build defence</button>
+    </div>
+
+    <div id="meters">
+      <div class="meter" id="mCut"><small>Today's emissions left</small><b id="tons">0 t</b><div class="bar"><i id="tonsBar"></i></div><small id="streak"></small></div>
+      <div class="meter" id="mDef"><small>Your shield</small><b id="shieldPct">0%</b><div class="bar"><i id="shieldBar"></i></div></div>
+    </div>
+    <div id="ticker"></div>
+
+    <div class="pad">
+      <p class="note" id="cityNote"></p>
+      <div id="upgrades"></div>
+    </div>
   </section>
 
   <section id="support">
@@ -405,17 +424,19 @@ function renderTop(){
   $("#chip").className="chip role-"+k.role;$("#chipTxt").textContent=k.n;
   $("#modeSw").hidden=k.role!=="B";
   document.querySelectorAll("#modeSw button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
-  if(m==="def"){
-    $("#mLabel").textContent="Your shield";
-    $("#tons").textContent=sh+"%";
-    $("#tonsBar").style.width=sh+"%";
-  }else{
-    $("#mLabel").textContent="Today's emissions left";
-    $("#tons").textContent=Math.round(S.tons)+" t";
-    $("#tonsBar").style.width=(100-100*S.tons/cap)+"%";
-  }
+  // One card per job the city actually has. A "both" city sees both and the live one is outlined.
+  $("#mCut").hidden=k.role==="R";
+  $("#mDef").hidden=k.role==="E";
+  $("#mCut").classList.toggle("active",k.role==="B"&&m==="cut");
+  $("#mDef").classList.toggle("active",k.role==="B"&&m==="def");
+  $("#tons").textContent=Math.round(S.tons)+" t";
+  $("#tonsBar").style.width=(100-100*S.tons/cap)+"%";
+  $("#shieldPct").textContent=sh+"%";
+  $("#shieldBar").style.width=sh+"%";
   $("#coins").textContent=Math.floor(S.coins);
   $("#streak").textContent=S.streak>1?`${S.streak}-day streak`:"";
+  const host=$(m==="def"?"#mDef":"#mCut");
+  if($("#streak").parentNode!==host)host.appendChild($("#streak"));
   // Smog is absolute, not a fraction of the city's own day: a fishing town at 60 t must not
   // open under the same brown sky as a refinery city at 900 t.
   $("#smog").style.opacity=Math.max(0,S.tons/cap*Math.min(1,k.base/DAY_CAP)*0.95);
@@ -441,8 +462,8 @@ function renderLists(force){
   const sig=[tab,mode(),JSON.stringify(S.upg),S.given,S.shield.self||0,worldStamp,tab==="rank"?Math.round(S.cut+S.defTotal):0].join("|");
   if(force||sig!==listSig){
   listSig=sig;
-  if(tab==="cut"){
-  $("#cutNote").textContent=mode()==="def"
+  if(tab==="city"){
+  $("#cityNote").textContent=mode()==="def"
     ?"Upgrades keep building while you're away. A siren and a mangrove belt work at 3 a.m. too."
     :"Upgrades cut emissions for you while you're away. Real cities do the same: one bus line replaces hundreds of cars every day.";
   $("#upgrades").innerHTML=upSet().map(u=>{const n=S.upg[u.id]||0;const cost=Math.round(u.cost*Math.pow(1.6,n));
