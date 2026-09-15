@@ -35,9 +35,21 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 @keyframes rise{to{transform:translateY(-90px) scale(2.4);opacity:0}}
 .pop{position:absolute;font-weight:800;color:var(--coin);text-shadow:0 1px 0 #7a4b00;pointer-events:none;animation:popup .7s forwards;font-size:18px}
 @keyframes popup{to{transform:translateY(-50px);opacity:0}}
+/* A defence tap drops a block onto the wall instead of releasing a puff upward.
+   Emissions leave the city; protection is added to it. The motion says which one you are doing. */
+.puff.brick{border-radius:3px;background:#A8C6D8;animation:drop .8s forwards}
+@keyframes drop{to{transform:translateY(70px) scale(.6);opacity:0}}
+.pop.def{color:#DBE9F1;text-shadow:0 1px 0 #1F5F8B}
+.pop.up{color:#8FE3A0;text-shadow:0 1px 0 #1B5A2A;font-size:16px}
 #hint{position:absolute;left:0;right:0;top:12px;text-align:center;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);font-size:15px;pointer-events:none}
 #wave{position:absolute;left:-100%;bottom:0;width:100%;height:120px;background:radial-gradient(ellipse at 50% 100%,rgba(14,42,71,.9),rgba(14,42,71,0) 70%);pointer-events:none;transition:left 1.2s ease-in}
 #wave.on{left:0}
+
+/* ---------- mode switch (cities that do both) ---------- */
+#modeSw{display:flex;margin:10px 16px 0;background:var(--mist);border-radius:12px;padding:3px}
+#modeSw[hidden]{display:none}
+#modeSw button{flex:1;border:0;background:transparent;padding:8px;border-radius:9px;font-weight:700;font-size:13.5px;color:#5b6b78;cursor:pointer}
+#modeSw button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 
 /* ---------- meters ---------- */
 #meters{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 16px 4px}
@@ -131,7 +143,7 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
           <g transform="translate(155,95)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
           <g transform="translate(305,85)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
         </g>
-        <g id="shieldWall" opacity="0"><rect x="0" y="222" width="420" height="10" fill="#8fb3c9"/><rect x="0" y="219" width="420" height="3" fill="#dbe9f1"/></g>
+        <g id="shieldWall" opacity="0"><rect id="wallBody" x="0" y="222" width="420" height="10" fill="#8fb3c9"/><rect id="wallCap" x="0" y="219" width="420" height="3" fill="#dbe9f1"/></g>
       </g>
     </svg>
     <div id="smog"></div>
@@ -139,8 +151,13 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
     <div id="hint">Tap the city to shut a chimney</div>
   </div>
 
+  <div id="modeSw" hidden>
+    <button data-mode="cut" class="on">Cut emissions</button>
+    <button data-mode="def">Build defence</button>
+  </div>
+
   <div id="meters">
-    <div class="meter"><small>Today's emissions left</small><b id="tons">0 t</b><div class="bar"><i id="tonsBar"></i></div></div>
+    <div class="meter"><small id="mLabel">Today's emissions left</small><b id="tons">0 t</b><div class="bar"><i id="tonsBar"></i></div></div>
     <div class="meter"><small>Coins</small><b id="coins">0</b><small id="streak"></small></div>
   </div>
   <div id="ticker"></div>
@@ -152,7 +169,7 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
   </nav>
 
   <section id="cut" class="on">
-    <p class="note">Upgrades cut emissions for you while you're away. Real cities do the same: one bus line replaces hundreds of cars every day.</p>
+    <p class="note" id="cutNote"></p>
     <div id="upgrades"></div>
   </section>
 
@@ -162,7 +179,7 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
   </section>
 
   <section id="rank">
-    <p class="note">Score = tonnes cut per person + coins given. A small city can lead. A bot farm cannot.</p>
+    <p class="note">Score = what your city built &mdash; tonnes cut or shield raised &mdash; plus coins given. A small city can lead. A bot farm cannot.</p>
     <div id="rankList"></div>
     <div class="row" style="margin-top:12px"><div><div class="t">Ad revenue dashboard</div><div class="d">Every rebuild ad becomes real money on a public ledger, donated to the city players chose.</div></div><b id="ledger">$0.00</b></div>
   </section>
@@ -206,11 +223,20 @@ const COUNTRIES_GLOBAL = [
 ];
 const COUNTRIES = REGIONS_KOREA;
 const ROLE_LABEL={E:"High-emission",R:"Disaster-risk",B:"Emits & at risk"};
-const UPGRADES=[
+// Two ladders, one per job. A high-emission city only ever sees the first, a disaster-risk city
+// only the second, a "both" city switches between them. Ids never collide, so a both-city keeps
+// what it bought in either mode and both ladders keep running while it is away.
+const UP_CUT=[
  {id:"bus",n:"Bus line",d:"Cuts 1 t / sec",cost:40,rate:1},
  {id:"solar",n:"Rooftop solar",d:"Cuts 3 t / sec",cost:150,rate:3},
  {id:"wind",n:"Wind farm",d:"Cuts 8 t / sec, turns a chimney into a turbine",cost:500,rate:8},
  {id:"grid",n:"Clean grid",d:"Cuts 20 t / sec",cost:1500,rate:20},
+];
+const UP_DEF=[
+ {id:"sandbag",n:"Sandbag depot",d:"Builds 1 defence / sec",cost:40,rate:1},
+ {id:"siren",n:"Warning siren",d:"Builds 3 defence / sec",cost:150,rate:3},
+ {id:"mangrove",n:"Mangrove belt",d:"Builds 8 defence / sec",cost:500,rate:8},
+ {id:"seawall",n:"Seawall section",d:"Builds 20 defence / sec",cost:1500,rate:20},
 ];
 const FACTS=[
  "Sea level has risen about 20 cm since 1900. Every centimetre pushes a tsunami further inland.",
@@ -225,7 +251,11 @@ const FACTS=[
 
 /* ---------- state ---------- */
 const DAY_CAP=600;                // tonnes per day per player (anti-bot, keeps it a daily habit)
-let S={uid:null,c:null,tons:0,coins:0,cut:0,given:0,upg:{},day:null,streak:0,taps:0,ledger:0,shield:{}};
+const DEF_CAP=600;                // defence points per day, same ceiling as tonnes
+const DEF_PER_PCT=20;             // 20 points = 1% shield, so a full day of tapping alone reaches 30%.
+                                  // A shield holds at 50%. You cannot get there on your own taps.
+let S={uid:null,c:null,tons:0,coins:0,cut:0,given:0,upg:{},day:null,streak:0,taps:0,ledger:0,shield:{},
+       mode:"cut",def:0,defAcc:0,defTotal:0};
 const store={
   get(){try{return JSON.parse(localStorage.getItem("yl")||"null")}catch(e){return null}},
   set(v){try{localStorage.setItem("yl",JSON.stringify(v))}catch(e){}}
@@ -294,21 +324,41 @@ $("#startBtn").onclick=()=>{
   setInterval(tick,1000);setInterval(disaster,45000);
 };
 function me(){return COUNTRIES.find(x=>x.c===S.c)}
+// The role decides what a tap means. Only a "both" city gets to choose.
+function mode(){const r=me().role;return r==="E"?"cut":r==="R"?"def":(S.mode==="def"?"def":"cut")}
+function upSet(){return mode()==="def"?UP_DEF:UP_CUT}
+// Defence points buy shield percent. Returns how much today's budget actually accepted.
+function addDef(n){
+  n=Math.min(n,DEF_CAP-S.def);
+  if(n<=0)return 0;
+  S.def+=n;S.defTotal+=n;S.defAcc+=n;S.coins+=n;
+  const up=Math.floor(S.defAcc/DEF_PER_PCT);
+  if(up){S.defAcc-=up*DEF_PER_PCT;S.shield.self=Math.min(100,(S.shield.self||0)+up)}
+  return n;
+}
 // A phone keeps the tab alive for days. The day has to roll over without a reload.
 function rollDay(){
   if(S.day===today())return false;
   const wasYesterday=S.day&&(new Date(today())-new Date(S.day))/864e5===1;
   S.streak=wasYesterday?S.streak+1:1;
-  S.day=today();S.tons=Math.min(DAY_CAP,me().base);S.taps=0;
+  S.day=today();S.tons=Math.min(DAY_CAP,me().base);S.taps=0;S.def=0;
   return true;
 }
 
 /* ---------- core loop ---------- */
 $("#scene").addEventListener("pointerdown",e=>{
-  if(S.tons<=0){toast("Today's emissions are gone. Come back tomorrow, or send coins.");return}
-  const amt=1;S.tons-=amt;S.cut+=amt;S.coins+=1;S.taps++;
-  const r=$("#scene").getBoundingClientRect();
-  puff(e.clientX-r.left,e.clientY-r.top);
+  const r=$("#scene").getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  if(mode()==="def"){
+    if(S.def>=DEF_CAP){toast("Today's defence work is done. Come back tomorrow, or send coins.");return}
+    const was=S.shield.self||0;
+    addDef(1);S.taps++;
+    puff(x,y,"+1","def");
+    if((S.shield.self||0)>was)pop(x+10,y-46,"+1% shield","up");
+  }else{
+    if(S.tons<=0){toast("Today's emissions are gone. Come back tomorrow, or send coins.");return}
+    S.tons-=1;S.cut+=1;S.coins+=1;S.taps++;
+    puff(x,y,"\u22121 t","cut");
+  }
   if(S.taps%25===0)fact(FACTS[(S.taps/25-1)%FACTS.length]);
   renderTop();affordable();save();
 });
@@ -320,8 +370,11 @@ function tick(){
   const dt=Math.max(0,Math.min(86400,Math.round((now-lastTick)/1000)));
   lastTick=now;
   if(rollDay())ticker(`New day. Emissions are back. ${S.streak}-day streak.`,"good");
-  let rate=0;UPGRADES.forEach(u=>rate+=(S.upg[u.id]||0)*u.rate);
-  if(rate>0&&S.tons>0&&dt>0){const a=Math.min(rate*dt,S.tons);S.tons-=a;S.cut+=a;S.coins+=a;save()}
+  let cr=0,dr=0;
+  UP_CUT.forEach(u=>cr+=(S.upg[u.id]||0)*u.rate);
+  UP_DEF.forEach(u=>dr+=(S.upg[u.id]||0)*u.rate);
+  if(cr>0&&S.tons>0&&dt>0){const a=Math.min(cr*dt,S.tons);S.tons-=a;S.cut+=a;S.coins+=a;save()}
+  if(dr>0&&dt>0&&addDef(dr*dt)>0)save();
   // world moves a little
   for(const c in WORLD){WORLD[c].cut+=Math.random()*0.05}
   emgSweep();renderTop();renderLists();emgClocks();
@@ -348,18 +401,33 @@ function disaster(){
 // lists on every tap made taps feel slow on cheap Android phones.
 function render(){renderTop();renderLists(true)}
 function renderTop(){
-  const k=me();
+  const k=me(),m=mode(),cap=Math.min(DAY_CAP,k.base),sh=S.shield.self||0;
   $("#chip").className="chip role-"+k.role;$("#chipTxt").textContent=k.n;
-  $("#tons").textContent=Math.round(S.tons)+" t";
-  $("#tonsBar").style.width=(100-100*S.tons/Math.min(DAY_CAP,k.base))+"%";
+  $("#modeSw").hidden=k.role!=="B";
+  document.querySelectorAll("#modeSw button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
+  if(m==="def"){
+    $("#mLabel").textContent="Your shield";
+    $("#tons").textContent=sh+"%";
+    $("#tonsBar").style.width=sh+"%";
+  }else{
+    $("#mLabel").textContent="Today's emissions left";
+    $("#tons").textContent=Math.round(S.tons)+" t";
+    $("#tonsBar").style.width=(100-100*S.tons/cap)+"%";
+  }
   $("#coins").textContent=Math.floor(S.coins);
   $("#streak").textContent=S.streak>1?`${S.streak}-day streak`:"";
-  const f=S.tons/Math.min(DAY_CAP,k.base);
-  $("#smog").style.opacity=Math.max(0,f*0.95);
+  // Smog is absolute, not a fraction of the city's own day: a fishing town at 60 t must not
+  // open under the same brown sky as a refinery city at 900 t.
+  $("#smog").style.opacity=Math.max(0,S.tons/cap*Math.min(1,k.base/DAY_CAP)*0.95);
   $("#turbines").setAttribute("opacity",S.upg.wind?1:0);
   document.querySelectorAll(".stack").forEach((s,i)=>s.style.opacity=(S.upg.wind&&i<3)?0:1);
-  $("#shieldWall").setAttribute("opacity",(S.shield.self||0)>=50?1:0);
-  $("#hint").textContent=S.tons<=0?"Clean air. Now go to Support.":"Tap the city to shut a chimney";
+  const h=Math.max(4,Math.round(sh*0.3));
+  $("#wallBody").setAttribute("y",232-h);$("#wallBody").setAttribute("height",h);
+  $("#wallCap").setAttribute("y",229-h);
+  $("#shieldWall").setAttribute("opacity",(m==="def"||sh>=50)?1:0);
+  $("#hint").textContent=m==="def"
+    ?(S.def>=DEF_CAP?"Today's work is done. Now go to Support.":"Tap the shore to raise the seawall")
+    :(S.tons<=0?"Clean air. Now go to Support.":"Tap the city to shut a chimney");
   $("#ledger").textContent="$"+S.ledger.toFixed(2);
 }
 let listSig="",worldStamp=0;
@@ -370,12 +438,14 @@ function renderLists(force){
   // running, and rebuilding a list replaces the very button a finger is already down on --
   // the browser then fires the click on the parent and the tap is lost. Prices and labels
   // only change when something structural does; affordability is synced in place below.
-  const sig=[tab,JSON.stringify(S.upg),S.given,S.shield.self||0,worldStamp,tab==="rank"?Math.round(S.cut):0].join("|");
+  const sig=[tab,mode(),JSON.stringify(S.upg),S.given,S.shield.self||0,worldStamp,tab==="rank"?Math.round(S.cut+S.defTotal):0].join("|");
   if(force||sig!==listSig){
   listSig=sig;
   if(tab==="cut"){
-  // upgrades
-  $("#upgrades").innerHTML=UPGRADES.map(u=>{const n=S.upg[u.id]||0;const cost=Math.round(u.cost*Math.pow(1.6,n));
+  $("#cutNote").textContent=mode()==="def"
+    ?"Upgrades keep building while you're away. A siren and a mangrove belt work at 3 a.m. too."
+    :"Upgrades cut emissions for you while you're away. Real cities do the same: one bus line replaces hundreds of cars every day.";
+  $("#upgrades").innerHTML=upSet().map(u=>{const n=S.upg[u.id]||0;const cost=Math.round(u.cost*Math.pow(1.6,n));
     return `<div class="row"><div><div class="t">${u.n}${n?` <span class="tag">×${n}</span>`:""}</div><div class="d">${u.d}</div></div><button class="btn coin" data-cost="${cost}" onclick="buy('${u.id}',${cost})">${cost}</button></div>`}).join("");
   }
   else if(tab==="support"){
@@ -385,7 +455,7 @@ function renderLists(force){
     return `<div class="row"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d">${isR?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`}</div></div><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button></div>`}).join("");
   }
   else{
-  const rows=COUNTRIES.map(x=>{const mine=x.c===S.c;const cut=mine?S.cut/k.base*100:WORLD[x.c].cut;const given=mine?S.given:WORLD[x.c].given;return{x,score:cut+given*0.5,me:mine}}).sort((a,b)=>b.score-a.score);
+  const rows=COUNTRIES.map(x=>{const mine=x.c===S.c;const cut=mine?S.cut/k.base*100+S.defTotal/DEF_PER_PCT:WORLD[x.c].cut;const given=mine?S.given:WORLD[x.c].given;return{x,score:cut+given*0.5,me:mine}}).sort((a,b)=>b.score-a.score);
   $("#rankList").innerHTML=rows.map((r,i)=>`<div class="rank${r.me?" me":""}"><span class="n">${i+1}</span><span>${r.x.n}<span class="tag ${r.x.role}">${ROLE_LABEL[r.x.role]}</span></span><span class="v">${r.score.toFixed(1)}</span></div>`).join("");
   }
   }
@@ -415,13 +485,21 @@ addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")
 addEventListener("pagehide",flush);
 
 /* ---------- fx ---------- */
-function puff(x,y){const p=document.createElement("div");p.className="puff";p.style.left=x-9+"px";p.style.top=y-9+"px";$("#scene").appendChild(p);setTimeout(()=>p.remove(),900);
-  const q=document.createElement("div");q.className="pop";q.textContent="−1 t";q.style.left=x+10+"px";q.style.top=y-20+"px";$("#scene").appendChild(q);setTimeout(()=>q.remove(),700)}
+function puff(x,y,label,kind){const p=document.createElement("div");p.className="puff"+(kind==="def"?" brick":"");
+  p.style.left=x-9+"px";p.style.top=y-9+"px";$("#scene").appendChild(p);setTimeout(()=>p.remove(),900);
+  pop(x+10,y-20,label,kind)}
+function pop(x,y,label,kind){const q=document.createElement("div");q.className="pop"+(kind==="def"||kind==="up"?" "+kind:"");
+  q.textContent=label;q.style.left=x+"px";q.style.top=y+"px";$("#scene").appendChild(q);setTimeout(()=>q.remove(),700)}
 let tt;function toast(msg,action,label){const t=$("#toast");t.style.display="block";t.innerHTML=msg+(action?` <button class="btn coin" style="margin-top:8px;display:block" id="ta">${label}</button>`:"");
   if(action)$("#ta").onclick=()=>{action();t.style.display="none"};clearTimeout(tt);tt=setTimeout(()=>t.style.display="none",action?12000:4500)}
 function fact(m){toast(m)}
 function ticker(m,cls){const t=$("#ticker");t.textContent=m;t.className=cls||""}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab));if(S.c)renderLists(true)});
+document.querySelectorAll("#modeSw button").forEach(b=>b.onclick=()=>{
+  if(!S.c||mode()===b.dataset.mode)return;
+  S.mode=b.dataset.mode;render();save();
+  ticker(S.mode==="def"?"Defence mode. Taps raise your seawall.":"Cut mode. Taps shut chimneys.");
+});
 document.querySelectorAll(".rotor").forEach((r,i)=>{r.style.transformOrigin="0 0";r.animate([{transform:"rotate(0deg)"},{transform:"rotate(360deg)"}],{duration:2500+i*400,iterations:Infinity})});
 </script>
 </body>
