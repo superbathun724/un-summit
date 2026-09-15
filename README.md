@@ -1,6 +1,6 @@
 # YOUTH LEADER
 
-A casual click game. Every tap cuts emissions and earns coins. Coins go to another city to build resilience. Ads turn coins into real money.
+A casual click game. What a tap does depends on your city: a high-emission city cuts emissions, a coastal city builds its shield, and some do both. Either way a tap earns coins, and coins can only be spent on another city. Ads turn coins into real money.
 
 Built by SeYeon, MinChae, JiHun — Hyundai Chungun High School, Ulsan, for the 2026 World Tsunami Awareness Day High School Summit.
 
@@ -14,5 +14,12 @@ Open `index.html` in a browser. No build step.
    (Name the repo `<username>.github.io` if you want the root URL.)
 
 `.nojekyll` is included so Pages serves the files as-is.
+
+## Tests (optional, dev only)
+```
+npm install
+npm test
+```
+Headless regression checks. The app needs none of this — see `test/README.md`.
 
 See `HANDOVER.md` for the full context, decisions, and to-do list.
