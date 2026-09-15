@@ -54,6 +54,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 nav{display:flex;margin:10px 16px 0;background:var(--mist);border-radius:12px;padding:3px}
 nav button{flex:1;border:0;background:transparent;padding:8px;border-radius:9px;font-weight:700;font-size:14px;color:#5b6b78;cursor:pointer}
 nav button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+nav button.alert::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--alert);margin-left:5px;vertical-align:middle;animation:blip 1.1s infinite}
+@keyframes blip{50%{opacity:.2}}
 section{padding:12px 16px 24px;display:none}
 section.on{display:block}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:14px;padding:12px;margin-bottom:8px}
@@ -69,6 +71,16 @@ section.on{display:block}
 .tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--mist);color:#3c4d5a;margin-left:6px;vertical-align:middle}
 .tag.E{background:#e7e0d0;color:#5c4a24}.tag.R{background:#d5e6f2;color:#123e5e}.tag.B{background:linear-gradient(90deg,#e7e0d0,#d5e6f2);color:#333}
 p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
+
+/* ---------- live disaster ---------- */
+/* Pinned to the top of Support for 3 minutes. Relief sent inside the window counts double,
+   because that is when it matters: the water is still there and nobody has paid yet. */
+.row.emg{background:#FDEDEA;outline:2px solid var(--alert);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{outline-color:rgba(224,90,71,.3)}}
+.row.emg .t{color:#9B2C1B}
+.row.emg .d{color:#7A4A40}
+.clock{font-variant-numeric:tabular-nums;font-weight:800;color:var(--alert)}
+.tag.SOS{background:var(--alert);color:#fff}
 
 /* ---------- overlay ---------- */
 #gate{position:absolute;inset:0;background:var(--deep);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:32px 28px;z-index:10}
@@ -145,7 +157,7 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
   </section>
 
   <section id="support">
-    <p class="note">Coins leave your city. Send them to a coastal city to build its shield, or to an industrial city to speed its clean-up. Support given counts in the ranking as much as tonnes cut.</p>
+    <p class="note">Coins leave your city. Send them to a coastal city to build its shield, or to an industrial city to speed its clean-up. When a wave hits, that city is pinned in red for 3 minutes and relief sent inside the window counts double.</p>
     <div id="supportList"></div>
   </section>
 
@@ -223,6 +235,31 @@ const store={
 function today(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 function uid(){return "d"+Math.random().toString(36).slice(2,10)}
 
+/* ---------- live disasters (in memory only: a 3-minute event, not a save) ---------- */
+const EMG_MS=180000, EMG_MAX=3;
+let EMG=[];
+function emgFind(c){return EMG.find(e=>e.c===c)}
+function emgAdd(c){
+  const ex=emgFind(c);
+  if(ex)ex.until=Date.now()+EMG_MS;
+  else{EMG.push({c,until:Date.now()+EMG_MS});if(EMG.length>EMG_MAX)EMG.shift()}
+  worldStamp++;
+}
+function emgSweep(){const n=EMG.length;EMG=EMG.filter(e=>e.until>Date.now());if(EMG.length!==n)worldStamp++}
+function emgDot(){$('nav button[data-tab="support"]').classList.toggle("alert",EMG.length>0)}
+// Only the seconds change every tick. Rebuilding the row would replace the button a finger
+// is already on, so the clock is the one thing written in place.
+function emgClocks(){const now=Date.now();document.querySelectorAll("[data-emg]").forEach(el=>{
+  const e=emgFind(el.dataset.emg);const s=e?Math.max(0,Math.ceil((e.until-now)/1000)):0;
+  el.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")})}
+function emgRow(e){
+  const x=COUNTRIES.find(y=>y.c===e.c),mine=x.c===S.c;
+  const sh=mine?(S.shield.self||0):WORLD[e.c].shield;
+  return `<div class="row emg"><div><div class="t">${mine?"Your city":x.n} was hit <span class="tag SOS">LIVE</span></div>`+
+    `<div class="d">Shield ${sh}%. Relief counts double for <span class="clock" data-emg="${e.c}">3:00</span></div></div>`+
+    `<button class="btn coin" data-cost="20" onclick="give('${mine?"self":e.c}')">20 &rarr; +10%</button></div>`;
+}
+
 /* ---------- simulated world (seeded by date so it looks alive and consistent) ---------- */
 function seed(str){let h=0;for(const ch of str)h=(h*31+ch.charCodeAt(0))>>>0;return()=>{h=(h*1664525+1013904223)>>>0;return h/4294967296}}
 let WORLD={};
@@ -287,7 +324,7 @@ function tick(){
   if(rate>0&&S.tons>0&&dt>0){const a=Math.min(rate*dt,S.tons);S.tons-=a;S.cut+=a;S.coins+=a;save()}
   // world moves a little
   for(const c in WORLD){WORLD[c].cut+=Math.random()*0.05}
-  renderTop();renderLists();
+  emgSweep();renderTop();renderLists();emgClocks();
 }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&S.c)tick()});
 function disaster(){
@@ -298,11 +335,12 @@ function disaster(){
   if(k.c===S.c){$("#wave").classList.add("on");setTimeout(()=>$("#wave").classList.remove("on"),2000)}
   if(sh>=50){ticker(`Wave hit ${k.n}. Shield held. ${sh}% funded.`,"good")}
   else{
-    ticker(`Wave hit ${k.n}. Shield only ${sh}%. Rebuild cost ${k.c===S.c?"20% of your coins":"was paid by no one"}.`,"bad");
+    ticker(`Wave hit ${k.n}. Shield only ${sh}%. Relief counts double for 3 minutes — see Support.`,"bad");
+    emgAdd(k.c);
     if(k.c===S.c){S.coins=Math.floor(S.coins*0.8);scene.classList.add("shake");setTimeout(()=>scene.classList.remove("shake"),600);
       toast("Your city was hit. Watch an ad to rebuild it free — the ad money goes to the public ledger, not to us.",()=>{S.coins=Math.round(S.coins/0.8);S.ledger+=0.02;render();save()},"Watch ad (simulated)")}
   }
-  renderTop();renderLists();
+  renderTop();renderLists();emgClocks();
 }
 
 /* ---------- render ---------- */
@@ -341,9 +379,9 @@ function renderLists(force){
     return `<div class="row"><div><div class="t">${u.n}${n?` <span class="tag">×${n}</span>`:""}</div><div class="d">${u.d}</div></div><button class="btn coin" data-cost="${cost}" onclick="buy('${u.id}',${cost})">${cost}</button></div>`}).join("");
   }
   else if(tab==="support"){
-  const targets=COUNTRIES.filter(x=>x.c!==S.c);
-  const selfRow=k.role!=="E"?`<div class="row"><div><div class="t">Your own shield <span class="tag R">${S.shield.self||0}%</span></div><div class="d">Seawall + early warning. Holds at 50%.</div></div><button class="btn" data-cost="20" onclick="give('self')">20 → +5%</button></div>`:"";
-  $("#supportList").innerHTML=selfRow+targets.map(x=>{const w=WORLD[x.c];const isR=x.role!=="E";
+  const targets=COUNTRIES.filter(x=>x.c!==S.c&&!emgFind(x.c));
+  const selfRow=(k.role!=="E"&&!emgFind(S.c))?`<div class="row"><div><div class="t">Your own shield <span class="tag R">${S.shield.self||0}%</span></div><div class="d">Seawall + early warning. Holds at 50%.</div></div><button class="btn" data-cost="20" onclick="give('self')">20 → +5%</button></div>`:"";
+  $("#supportList").innerHTML=EMG.map(emgRow).join("")+selfRow+targets.map(x=>{const w=WORLD[x.c];const isR=x.role!=="E";
     return `<div class="row"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d">${isR?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`}</div></div><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button></div>`}).join("");
   }
   else{
@@ -351,15 +389,20 @@ function renderLists(force){
   $("#rankList").innerHTML=rows.map((r,i)=>`<div class="rank${r.me?" me":""}"><span class="n">${i+1}</span><span>${r.x.n}<span class="tag ${r.x.role}">${ROLE_LABEL[r.x.role]}</span></span><span class="v">${r.score.toFixed(1)}</span></div>`).join("");
   }
   }
-  affordable();
+  emgDot();affordable();
 }
 // Grey a button out or bring it back without replacing the node.
 function affordable(){document.querySelectorAll("section.on .btn[data-cost]").forEach(b=>{b.disabled=S.coins<+b.dataset.cost})}
 function buy(id,cost){if(S.coins<cost)return;S.coins-=cost;S.upg[id]=(S.upg[id]||0)+1;render();save();if(id==="wind"&&S.upg.wind===1)toast("Three chimneys became turbines. The sky clears a little faster now.")}
-function give(c){if(S.coins<20)return;S.coins-=20;S.given+=20;
-  if(c==="self"){S.shield.self=Math.min(100,(S.shield.self||0)+5)}
-  else{const x=COUNTRIES.find(y=>y.c===c);if(x.role!=="E")WORLD[c].shield=Math.min(100,WORLD[c].shield+5);else WORLD[c].cut+=2;
-    if((WORLD[c].shield===50&&x.role!=="E"))toast(`${x.n}'s shield just reached 50%. The next wave there will hold.`)}
+function give(c){if(S.coins<20)return;
+  const key=c==="self"?S.c:c, dbl=!!emgFind(key), step=dbl?10:5;
+  S.coins-=20;S.given+=20;
+  if(c==="self"){S.shield.self=Math.min(100,(S.shield.self||0)+step)}
+  else{const x=COUNTRIES.find(y=>y.c===c);
+    if(x.role!=="E"){const was=WORLD[c].shield;WORLD[c].shield=Math.min(100,was+step);
+      if(was<50&&WORLD[c].shield>=50)toast(`${x.n}'s shield just reached 50%. The next wave there will hold.`)}
+    else WORLD[c].cut+=dbl?4:2}
+  if(dbl)toast("Relief doubled. It arrived while the water was still there.");
   worldStamp++;render();save()}
 // localStorage writes are synchronous. One per tap stutters on a phone, so batch them
 // and always flush when the browser is backgrounded or the tab is closed.
