@@ -49,6 +49,28 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 #hint{position:absolute;left:0;right:0;top:12px;text-align:center;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);font-size:15px;pointer-events:none}
 #wave{position:absolute;left:-100%;bottom:0;width:100%;height:120px;background:radial-gradient(ellipse at 50% 100%,rgba(14,42,71,.9),rgba(14,42,71,0) 70%);pointer-events:none;transition:left 1.2s ease-in}
 #wave.on{left:0}
+/* Scenery motion stays small and slow: it is background, and the taps are the show.
+   Animated wrappers never carry a transform attribute -- CSS would overwrite it. */
+/* fill-box only on these: the turbine rotors spin around their own 0,0 and must keep view-box. */
+.drift,.bob,.cross,.sway,.cable,.fly{transform-box:fill-box}
+.shim{animation:shim 3s ease-in-out infinite alternate}
+@keyframes shim{from{opacity:.15}}
+.drift{animation:drift 16s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translateX(34px)}}
+.bob{transform-origin:50% 100%;animation:bob 2.8s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(-1.5px) rotate(-2deg)}to{transform:translateY(1.5px) rotate(2deg)}}
+.cross{animation:cross 22s linear infinite}
+@keyframes cross{from{transform:translateX(-160px)}to{transform:translateX(580px)}}
+.blink{animation:blink 2.4s steps(1) infinite}
+@keyframes blink{50%{opacity:.1}}
+.glow{animation:glow 1.7s ease-in-out infinite alternate}
+@keyframes glow{from{opacity:.35}}
+.sway{transform-origin:50% 0;animation:sway 3.6s ease-in-out infinite alternate}
+@keyframes sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+.cable{animation:cable 14s ease-in-out infinite alternate}
+@keyframes cable{to{transform:translate(120px,-48px)}}
+.fly{animation:fly 9s ease-in-out infinite alternate}
+@keyframes fly{to{transform:translate(70px,-12px)}}
 
 /* ---------- mode switch (cities that do both) ---------- */
 #modeSw{display:flex;margin:10px 16px 0;background:var(--mist);border-radius:12px;padding:3px}
@@ -117,6 +139,20 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
 #gate .why{font-size:12.5px;color:#8fa6ba;margin-top:14px;line-height:1.5}
 .toast{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:388px;bottom:calc(18px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;z-index:9;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:in .25s}
 @keyframes in{from{transform:translate(-50%,12px);opacity:0}}
+
+/* ---------- ad (stand-in until a real rewarded-ad network is connected) ---------- */
+#ad{position:absolute;inset:0;background:var(--deep);color:#fff;display:flex;flex-direction:column;padding:16px 20px 24px;z-index:20;gap:12px}
+#ad[hidden]{display:none}
+.adtop{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#b9cbdc}
+.adtag{background:var(--coin);color:#3d2a00;font-weight:800;border-radius:6px;padding:2px 7px}
+.adbox{flex:1;border:2px dashed #3d5a78;border-radius:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px;gap:8px}
+.adbox b{font-size:28px;letter-spacing:-.02em}
+.adbox span{color:#8fa6ba;font-size:13.5px;line-height:1.5}
+#adFor{font-size:14px;line-height:1.45;color:#dbe9f1}
+#adDone{padding:14px;font-size:16px}
+#adSkip{background:transparent;border:0;color:#8fa6ba;font-size:13px;padding:6px;cursor:pointer}
+.bg{display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.btn.ad{background:#fff;color:var(--deep);box-shadow:inset 0 0 0 1.5px var(--deep);padding:6px 10px;font-size:12.5px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -148,27 +184,24 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
   <section id="city" class="on">
     <div id="scene">
       <svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+        <g id="backdrop"></g>
         <g id="cityArt">
-          <rect x="30" y="150" width="46" height="60" fill="#3d4a55"/>
-          <rect x="90" y="120" width="60" height="90" fill="#4a5966"/>
-          <rect x="170" y="140" width="40" height="70" fill="#3d4a55"/>
-          <rect x="225" y="105" width="70" height="105" fill="#56677a"/>
-          <rect x="310" y="150" width="50" height="60" fill="#3d4a55"/>
-          <rect x="375" y="130" width="30" height="80" fill="#4a5966"/>
-          <rect x="0" y="210" width="420" height="20" fill="#2b3640"/>
+          <g id="skyline"></g>
+          <rect x="-100" y="210" width="620" height="20" fill="#2b3640"/>
           <g id="stacks">
-            <rect class="stack" x="60" y="95" width="10" height="60" fill="#6b5a45"/>
-            <rect class="stack" x="150" y="80" width="10" height="45" fill="#6b5a45"/>
-            <rect class="stack" x="300" y="70" width="10" height="40" fill="#6b5a45"/>
-            <rect class="stack" x="352" y="100" width="10" height="55" fill="#6b5a45"/>
+            <rect class="stack" x="60" y="95" width="10" height="115" fill="#6b5a45"/>
+            <rect class="stack" x="150" y="80" width="10" height="130" fill="#6b5a45"/>
+            <rect class="stack" x="300" y="70" width="10" height="140" fill="#6b5a45"/>
+            <rect class="stack" x="352" y="100" width="10" height="110" fill="#6b5a45"/>
           </g>
           <g id="turbines" opacity="0">
-            <g transform="translate(65,110)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
-            <g transform="translate(155,95)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
-            <g transform="translate(305,85)"><rect x="-2" y="0" width="4" height="45" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+            <g transform="translate(65,110)"><rect x="-2" y="0" width="4" height="100" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+            <g transform="translate(155,95)"><rect x="-2" y="0" width="4" height="115" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
+            <g transform="translate(305,85)"><rect x="-2" y="0" width="4" height="125" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
           </g>
           <g id="shieldWall" opacity="0"><rect id="wallBody" x="0" y="222" width="420" height="10" fill="#8fb3c9"/><rect id="wallCap" x="0" y="219" width="420" height="3" fill="#dbe9f1"/></g>
         </g>
+        <g id="fore"></g>
       </svg>
       <div id="smog"></div>
       <div id="wave"></div>
@@ -194,14 +227,23 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
 
   <section id="support">
     <p class="note">Coins leave your city. Send them to a coastal city to build its shield, or to an industrial city to speed its clean-up. When a wave hits, that city is pinned in red for 3 minutes and relief sent inside the window counts double.</p>
+    <p class="note" id="adNote"></p>
     <div id="supportList"></div>
   </section>
 
   <section id="rank">
     <p class="note">Score = what your city built &mdash; tonnes cut or shield raised &mdash; plus coins given. A small city can lead. A bot farm cannot.</p>
     <div id="rankList"></div>
-    <div class="row" style="margin-top:12px"><div><div class="t">Ad revenue dashboard</div><div class="d">Every rebuild ad becomes real money on a public ledger, donated to the city players chose.</div></div><b id="ledger">$0.00</b></div>
+    <div class="row" style="margin-top:12px"><div><div class="t">Ad revenue dashboard</div><div class="d">Every ad you finish becomes real money on a public ledger, donated to the city players chose.</div></div><b id="ledger">$0.00</b></div>
   </section>
+
+  <div id="ad" hidden>
+    <div class="adtop"><span class="adtag">AD</span><span id="adLeft"></span></div>
+    <div class="adbox"><b>Ad slot</b><span>Placeholder. A real ad plays here once an ad network is connected.<br>The money from it goes to the public ledger.</span></div>
+    <p id="adFor"></p>
+    <button class="btn coin" id="adDone" disabled></button>
+    <button id="adSkip">Close without reward</button>
+  </div>
 
   <div id="toast" class="toast" style="display:none"></div>
 </div>
@@ -296,7 +338,13 @@ const DEF_CAP=600;                // defence points per day, same ceiling as ton
 const DEF_PER_PCT=20;             // 20 points = 1% shield, so a full day of tapping alone reaches 30%.
                                   // A shield holds at 50%. You cannot get there on your own taps.
 let S={uid:null,c:null,tons:0,coins:0,cut:0,given:0,upg:{},day:null,streak:0,taps:0,ledger:0,shield:{},
-       mode:"cut",def:0,defAcc:0,defTotal:0};
+       mode:"cut",def:0,defAcc:0,defTotal:0,ads:0,adAt:0};
+// Rewarded ads only, never forced. The player opens each one. The caps keep it from becoming
+// an ad-watching loop and sit inside what ad networks allow for rewarded web ads.
+const AD_SEC=5;                   // stand-in length. A real rewarded ad runs 15-30 s.
+const AD_GAP_MS=60000;            // one ad a minute at most
+const AD_DAY=10;                  // ads per player per day
+const AD_USD=0.02;                // what one finished ad adds to the ledger (estimate)
 const store={
   get(){try{return JSON.parse(localStorage.getItem("yl")||"null")}catch(e){return null}},
   set(v){try{localStorage.setItem("yl",JSON.stringify(v))}catch(e){}}
@@ -328,7 +376,7 @@ function emgRow(e){
   const sh=mine?(S.shield.self||0):WORLD[e.c].shield;
   return `<div class="row emg"><div><div class="t">${mine?"Your city":x.n} was hit <span class="tag SOS">LIVE</span></div>`+
     `<div class="d">Shield ${sh}%. Relief counts double for <span class="clock" data-emg="${e.c}">3:00</span></div></div>`+
-    `<button class="btn coin" data-cost="20" onclick="give('${mine?"self":e.c}')">20 &rarr; +10%</button></div>`;
+    `<div class="bg"><button class="btn coin" data-cost="20" onclick="give('${mine?"self":e.c}')">20 &rarr; +10%</button>${adBtn(mine?"self":e.c)}</div></div>`;
 }
 
 /* ---------- simulated world (seeded by date so it looks alive and consistent) ---------- */
@@ -359,6 +407,7 @@ $("#startBtn").onclick=()=>{
   const k=me();
   rollDay();
   buildWorld();
+  scenery();
   $("#gate").style.display="none";
   lastTick=Date.now();
   render();fact("Your role: "+ROLE_LABEL[k.role]+". "+(k.role==="E"?"Cut tonnes, then send coins where the waves land.":k.role==="R"?"Build your shield with coins, yours or a stranger's.":"You cut and you build. Most countries do."));
@@ -383,13 +432,28 @@ function rollDay(){
   if(S.day===today())return false;
   const wasYesterday=S.day&&(new Date(today())-new Date(S.day))/864e5===1;
   S.streak=wasYesterday?S.streak+1:1;
-  S.day=today();S.tons=Math.min(DAY_CAP,me().base);S.taps=0;S.def=0;
+  S.day=today();S.tons=Math.min(DAY_CAP,me().base);S.taps=0;S.def=0;S.ads=0;
   return true;
 }
 
 /* ---------- core loop ---------- */
 $("#scene").addEventListener("pointerdown",e=>{
-  const r=$("#scene").getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  const r=$("#scene").getBoundingClientRect();
+  tap(e.clientX-r.left,e.clientY-r.top);
+});
+// Space taps on a laptop. It lands on a random chimney (or the wall), so it looks like a tap.
+// Held keys repeat, which would be an autoclicker; only fresh presses count.
+document.addEventListener("keydown",e=>{
+  if(e.code!=="Space"||e.repeat||!S.c||AD||!$("#city").classList.contains("on"))return;
+  if(e.target.closest("input,select,textarea"))return;
+  // A focused button (the tab you just clicked) would also fire on Space. Take the key from it.
+  e.preventDefault();if(e.target.closest("button"))e.target.blur();
+  const r=$("#scene").getBoundingClientRect();
+  const el=mode()==="def"?$("#wallBody"):[...document.querySelectorAll(".stack")][Math.random()*4|0];
+  const b=el.getBoundingClientRect();
+  tap(b.left-r.left+Math.random()*b.width,(mode()==="def"?b.top:b.top+4)-r.top);
+});
+function tap(x,y){
   if(mode()==="def"){
     if(S.def>=DEF_CAP){toast("Today's defence work is done. Come back tomorrow, or send coins.");return}
     const was=S.shield.self||0;
@@ -403,7 +467,7 @@ $("#scene").addEventListener("pointerdown",e=>{
   }
   if(S.taps%25===0)fact(FACTS[(S.taps/25-1)%FACTS.length]);
   renderTop();affordable();save();
-});
+}
 let lastTick=Date.now();
 function tick(){
   // Timers stop while the screen is off. Pay out the real elapsed time instead of 1 s,
@@ -419,7 +483,7 @@ function tick(){
   if(dr>0&&dt>0&&addDef(dr*dt)>0)save();
   // world moves a little
   for(const c in WORLD){WORLD[c].cut+=Math.random()*0.05}
-  emgSweep();renderTop();renderLists();emgClocks();
+  emgSweep();renderTop();renderLists();emgClocks();adSync();
 }
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&S.c)tick()});
 function disaster(){
@@ -432,10 +496,112 @@ function disaster(){
   else{
     ticker(`Wave hit ${k.n}. Shield only ${sh}%. Relief counts double for 3 minutes — see Support.`,"bad");
     emgAdd(k.c);
-    if(k.c===S.c){S.coins=Math.floor(S.coins*0.8);scene.classList.add("shake");setTimeout(()=>scene.classList.remove("shake"),600);
-      toast("Your city was hit. Watch an ad to rebuild it free — the ad money goes to the public ledger, not to us.",()=>{S.coins=Math.round(S.coins/0.8);S.ledger+=0.02;render();save()},"Watch ad (simulated)")}
+    if(k.c===S.c){const lost=S.coins-Math.floor(S.coins*0.8);S.coins-=lost;scene.classList.add("shake");setTimeout(()=>scene.classList.remove("shake"),600);
+      // The wave is not the player's timing, so this ad skips the one-a-minute gap. The daily cap still holds.
+      toast("Your city was hit. Watch an ad to rebuild it free — the ad money goes to the public ledger, not to us.",
+        ()=>watchAd(`Reward: the ${lost} coins the wave took, back.`,()=>{S.coins+=lost},true),"Watch ad")}
   }
   renderTop();renderLists();emgClocks();
+}
+
+/* ---------- scenery: one backdrop per city ---------- */
+// Terrain and public structures only, same rule as LOCAL: no company plants, no named seas, and no
+// landmark drawn closely enough to be someone's design. A region with no entry keeps the plain city.
+const R=(x,y,w,h,f,a="")=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}"${a}/>`;
+const P=(d,f,a="")=>`<path d="${d}" fill="${f}"${a}/>`;
+const L=(d,c,w=1.5,a="")=>`<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}"${a}/>`;
+const at=(x,y,body,cls="",st="")=>`<g${cls?` class="${cls}"`:""}${st?` style="${st}"`:""}><g transform="translate(${x},${y})">${body}</g></g>`;
+const ridge=(pts,f)=>P(`M-100 214L${pts} 520 214Z`,f);
+const cloud=(x,y,d)=>at(x,y,`<ellipse rx="22" ry="8" fill="#fff" opacity=".8"/><ellipse cx="12" cy="-5" rx="13" ry="8" fill="#fff" opacity=".8"/>`,"drift",`animation-duration:${d}s`);
+const boat=(x,y,d=0,c="#e8eef2")=>at(x,y,P("M-14 0H14L10 6H-10Z","#c8553d")+R(-7,-7,9,7,c)+L("M5-7V-17","#555",1),"bob",`animation-delay:-${d}s`);
+const birds=(x,y,d=0)=>at(x,y,L("M0 0q4-4 8 0q4-4 8 0M14-10q3-3 6 0q3-3 6 0","#34495e",1.2),"fly",`animation-delay:-${d}s`);
+const ship=(y,sec,d=0)=>at(0,y,P("M0 0H70L64 10H6Z","#2c3e50")+R(10,-8,14,8,"#c0392b")+R(24,-8,14,8,"#2980b9")+R(38,-8,14,8,"#e6a23c")+R(54,-15,9,15,"#ecf0f1"),"cross",`animation-duration:${sec}s;animation-delay:-${d}s`);
+const train=(y,sec,c,n=4)=>at(0,y,[...Array(n)].map((_,i)=>R(i*21,0,19,8,c)+R(i*21+3,2,13,2,"#2c3e50")).join(""),"cross",`animation-duration:${sec}s`);
+const tanks=(xs,y=210)=>xs.map(x=>R(x-11,y-14,22,14,"#dfe6ea")+`<ellipse cx="${x}" cy="${y-14}" rx="11" ry="3" fill="#b0bec5"/>`).join("");
+const pines=(xs,y=210,s=1)=>xs.map(x=>P(`M${x} ${y}l${6*s}-${20*s}l${6*s} ${20*s}Z`,"#2f5d3a")).join("");
+const isle=(x,y,w,h,f)=>P(`M${x} ${y}Q${x+w/2} ${y-h*2} ${x+w} ${y}Z`,f);
+const aCrane=x=>L(`M${x} 214L${x+10} 150L${x+20} 214M${x-20} 150H${x+46}`,"#d9534f",3)+at(x+36,151,L("M0 0V26","#333",1)+R(-4,26,8,5,"#333"),"sway");
+const stayed=(x1,x2,y,px,h)=>R(x1,y,x2-x1,3,"#e8eef2")+R(px-2,y-h,4,h+14,"#e8eef2")+
+  L([1,2,3,4].map(k=>`M${px} ${y-h+4}L${px-k*(px-x1)/4.5} ${y}M${px} ${y-h+4}L${px+k*(x2-px)/4.5} ${y}`).join(""),"#e8eef2",.8);
+const lamps=(pts,c="#ffe28a")=>pts.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="1.6" fill="${c}" class="blink" style="animation-delay:-${i*.4}s"/>`).join("");
+const LAND="#8aa46a";
+const SCENES={
+ ULS:{sky:["#9fbfd3","#e3e6dc"],
+   back:ridge("-100 170 0 150 70 128 150 150 230 138 320 156 420 140","#9fb2c0")+
+     R(262,92,6,120,"#e5b23a")+R(392,92,6,120,"#e5b23a")+R(252,84,156,10,"#e5b23a")+at(325,94,L("M0 0V44","#333",1)+R(-5,44,10,6,"#333"),"sway"),
+   fore:tanks([186,210])+ship(262,30,8)+at(340,252,P("M0 0q-6-10-12-12q6 0 12 6q6-6 12-6q-6 2-12 12Z","#2c4a63"),"bob")+boat(90,250,1)},
+ POH:{sky:["#f3b48a","#fde6c8"],
+   back:`<circle cx="70" cy="96" r="16" fill="#ffd27a"/>`+ridge("-100 180 60 165 180 172 300 160 420 176","#b9a79a")+R(-100,150,620,64,"#ff9a4d",' opacity=".25" class="glow"'),
+   fore:R(112,118,22,92,"#5d4037")+P("M110 118L123 104L136 118Z","#4e342e")+`<ellipse cx="123" cy="104" rx="9" ry="4" fill="#ff8a3d" class="glow"/>`+boat(60,248,0)+boat(210,262,1.3)+boat(360,252,.6)},
+ YEO:{sky:["#46508a","#f0b48a"],lit:1,
+   back:`<circle cx="360" cy="70" r="9" fill="#fdf1c7"/>`+isle(-40,214,160,34,"#5a6b8c")+isle(250,214,200,26,"#5a6b8c")+
+     R(-100,168,620,3,"#dfe6ee")+R(88,110,5,104,"#dfe6ee")+R(328,110,5,104,"#dfe6ee")+L("M-100 150Q-6 204 90 112Q210 196 330 112Q426 204 520 150","#dfe6ee",1.4)+
+     lamps([[10,168],[50,168],[130,168],[170,168],[210,168],[250,168],[290,168],[370,168],[410,168]]),
+   fore:tanks([185,207,392])+boat(120,254,.4,"#ffe28a")+boat(300,266,1.7,"#ffe28a")},
+ INC:{sky:["#8ec6e6","#dbeef8"],
+   back:isle(-60,214,180,20,"#8fa9b8")+aCrane(378)+at(0,62,P("M0 0H26L32-3L26 2H0ZM10 0L16-7H19L16 0ZM10 2L16 8H19L16 2Z","#fff"),"cross","animation-duration:17s"),
+   fore:stayed(-100,520,250,260,40)+ship(282,26)+boat(60,270,.8)},
+ SEO:{sky:["#86c1e4","#dcedf6"],water:"#3f7fae",shore:["#6a9a5a",12],
+   back:ridge("-100 160 -20 130 20 112 50 126 90 96 130 128 170 118 210 136 270 124 330 104 380 128 440 120","#8aa0ae")+
+     ridge("-100 184 60 176 130 170 200 150 260 172 340 180","#7c9a7a")+R(159,78,4,72,"#eceff1")+R(155,92,12,8,"#eceff1")+R(160,60,2,18,"#eceff1"),
+   fore:R(-100,288,620,20,"#6a9a5a")+R(-100,234,620,3,"#b0bec5")+L("M0 237v7M60 237v7M120 237v7M180 237v7M240 237v7M300 237v7M360 237v7M420 237v7","#90a4ae",2)+
+     train(226,12,"#dfe6ea",5)+birds(60,70,2)},
+ DAE:{sky:["#8cc3e0","#f1e2c4"],water:LAND,
+   back:ridge("-100 150 -20 128 40 140 110 98 170 132 250 120 310 140 380 110 440 136","#7f9a86")+
+     R(38,100,3,70,"#eceff1")+R(34,110,11,7,"#eceff1")+ridge("-100 196 50 170 120 190","#6f8c78"),
+   fore:R(-100,222,620,4,"#cfd8dc")+L("M20 226v6M100 226v6M180 226v6M260 226v6M340 226v6","#b0bec5",3)+train(214,14,"#e8eef2",3)+
+     L("M-100 280Q60 264 200 276T520 270","#6aaed6",6)+
+     [40,90,150,270,330,390].map((x,i)=>`<circle cx="${x}" cy="${250+i%2*14}" r="9" fill="#4f7d3a"/><circle cx="${x-3}" cy="${248+i%2*14}" r="1.8" fill="#d9483b"/><circle cx="${x+4}" cy="${252+i%2*14}" r="1.8" fill="#d9483b"/>`).join("")},
+ BUS:{sky:["#7fc0e8","#d8eef8"],
+   back:ridge("-100 150 -10 118 60 132 120 102 200 130 260 110 330 128 400 104 460 130","#6f9477")+
+     [...Array(26)].map((_,i)=>R(i*17-8,112+(i*7%5)*7+Math.abs(i-7)%5*3,7,6,["#f3efe6","#e7b7a3","#bcd4e6"][i%3])).join("")+aCrane(300)+aCrane(360),
+   fore:ship(262,24,5)+boat(250,250,.5)+birds(150,86,4)},
+ GAN:{sky:["#78bde6","#e2f2fa"],shore:["#e9d8a6",10],line:"town",
+   back:ridge("-100 150 -30 118 40 134 100 92 170 124 240 100 310 128 380 96 450 126","#7d95ad")+
+     ridge("-100 170 40 150 130 164 220 146 300 162 420 150","#5e7c6a")+pines([-2,22,64,112,158,200,246,290,332,376,414],210,1.6),
+   fore:L("M-20 242q20-5 40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0","#fff",1.5,' class="shim"')+boat(310,262,.3)+birds(80,80)+birds(250,60,5)},
+ SOK:{sky:["#8fc3e3","#e6f2f8"],line:"town",
+   back:ridge("-100 170 -40 150 0 104 20 124 40 84 60 110 80 70 104 102 126 88 150 120 190 110 230 140 300 150 360 132 440 156","#b8c2c9")+
+     ridge("-100 190 30 172 90 184 160 168 240 184","#8a9aa6"),
+   fore:R(350,240,90,5,"#9aa5ad")+R(396,210,9,30,"#f5f5f5")+R(395,204,11,6,"#c0392b")+P("M400 206L340 196V216Z","#fff6c4",' class="blink" opacity=".7"')+
+     boat(90,256,0,"#ffe28a")+boat(170,268,1.1,"#ffe28a")+L("M70 246h40M150 258h40","#ffe28a",1,' stroke-dasharray="2 5"')+birds(220,76,3)},
+ JEJ:{sky:["#83c6ea","#e4f4fb"],water:"#1d7a8c",line:"town",
+   back:P("M-100 214Q60 206 150 120Q210 70 270 120Q360 206 520 214Z","#6d8b74")+cloud(190,98,11)+
+     isle(20,214,70,18,"#7f9e7c")+isle(330,214,80,22,"#7f9e7c")+
+     [16,70,128,238,300,366].map(x=>`<circle cx="${x}" cy="200" r="8" fill="#3f6f3a"/><circle cx="${x-2}" cy="198" r="1.8" fill="#f39c12"/><circle cx="${x+3}" cy="202" r="1.8" fill="#f39c12"/>`).join(""),
+   fore:L("M-20 246q20-5 40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0","#dff3f5",1.5,' class="shim"')+boat(260,262,.9)},
+ TON:{sky:["#7fc2e9","#def0f9"],line:"town",
+   back:ridge("-100 190 120 176 240 160 320 136 370 110 430 130","#6f9a78")+L("M240 170L360 122","#555",1)+
+     at(240,171,L("M0 0V-3","#555",1)+R(-5,0,10,8,"#e74c3c"),"cable"),
+   fore:isle(20,246,70,10,"#5f8f68")+isle(320,242,90,12,"#5f8f68")+L("M120 256h90M120 266h90M120 276h90","#f5f5f5",2,' stroke-dasharray="1 7" class="shim"')+
+     boat(250,262,.2)+boat(70,280,1.4)+boat(380,272,.7)+birds(180,70,1)},
+ MOK:{sky:["#8cc0dd","#f0e6cf"],shore:["#9b8a6c",18],line:"town",
+   back:ridge("-100 196 -30 170 -10 150 10 160 26 132 44 150 60 138 84 164 130 186","#8d8a7e")+stayed(160,520,180,330,62),
+   fore:L("M30 234h30M150 238h40M300 233h26","#c9dbe6",1.5,' class="shim"')+boat(200,262,.5)+boat(330,270,1.5)+birds(100,90,2)+birds(260,250,6)},
+};
+function skyline(kind,lit,o){
+  if(kind==="town")return [...Array(10)].map((_,i)=>{const j=i+o,x=i*44-6,w=30+j%3*6,h=20+j*7%4*7,y=210-h;
+    return R(x,y,w,h,["#e8e2d6","#d9d4c7","#efe9dc"][j%3])+R(x+w/2-3,y+h-9,6,9,"#7a6a58")+P(`M${x-3} ${y}L${x+w/2} ${y-11}L${x+w+3} ${y}Z`,["#2e6fa8","#c0573e","#3d7d6b"][j%3])}).join("");
+  // Metro towers stay below the ridgeline so the mountains and landmarks behind them still read.
+  const H=[50,78,40,96,58,84,104,52,88,62,74];
+  const B=kind==="metro"
+    ?[-10,24,64,98,146,182,224,276,312,356,392].map((x,i)=>{const h=H[(i+o)%11];return[x,210-h,[30,34,28,40,30,36,46,30,38,30,36][i],h]})
+    :[[30,150,46,60],[90,120,60,90],[170,140,40,70],[225,105,70,105],[310,150,50,60],[375,130,30,80]];
+  return B.map((b,i)=>R(...b,["#3d4a55","#4a5966","#56677a"][i%3])+
+    (lit?lamps([[b[0]+8,b[1]+12],[b[0]+b[2]-10,b[1]+26],[b[0]+14,b[1]+40]],"#ffd76a"):"")).join("");
+}
+const METRO=["INC","SEO","DAE","BUS"];
+function scenery(){
+  const s=SCENES[S.c]||{},sk=s.sky||["#7FC4E8","#d4ecf7"];
+  $("#backdrop").innerHTML=`<defs><linearGradient id="skyG" gradientUnits="userSpaceOnUse" x1="0" y1="30" x2="0" y2="215">`+
+    `<stop offset="0" stop-color="${sk[0]}"/><stop offset="1" stop-color="${sk[1]}"/></linearGradient></defs>`+
+    R(-100,-200,620,432,"url(#skyG)")+cloud(40,62,17)+cloud(250,48,21)+(s.back||"")+
+    R(-100,228,620,120,s.water||"#1F5F8B")+(s.shore?R(-100,228,620,s.shore[1],s.shore[0]):"")+
+    (s.water===LAND?"":L("M30 252h24M140 264h30M260 250h20M350 274h26","#9cc7e4",1.5,' class="shim"'));
+  $("#skyline").innerHTML=skyline(s.line||(METRO.includes(S.c)?"metro":"ind"),s.lit,Math.max(0,COUNTRIES.findIndex(x=>x.c===S.c))*3);
+  $("#fore").innerHTML=s.fore||"";
+  // A fishing town has no chimneys to shut. Its taps go to the shore.
+  $("#stacks").style.display=me().role==="R"?"none":"";
 }
 
 /* ---------- render ---------- */
@@ -494,9 +660,9 @@ function renderLists(force){
   }
   else if(tab==="support"){
   const targets=COUNTRIES.filter(x=>x.c!==S.c&&!emgFind(x.c));
-  const selfRow=(k.role!=="E"&&!emgFind(S.c))?`<div class="row"><div><div class="t">Your own shield <span class="tag R">${S.shield.self||0}%</span></div><div class="d">Seawall + early warning. Holds at 50%.</div></div><button class="btn" data-cost="20" onclick="give('self')">20 → +5%</button></div>`:"";
+  const selfRow=(k.role!=="E"&&!emgFind(S.c))?`<div class="row"><div><div class="t">Your own shield <span class="tag R">${S.shield.self||0}%</span></div><div class="d">Seawall + early warning. Holds at 50%.</div></div><div class="bg"><button class="btn" data-cost="20" onclick="give('self')">20 → +5%</button>${adBtn("self")}</div></div>`:"";
   $("#supportList").innerHTML=EMG.map(emgRow).join("")+selfRow+targets.map(x=>{const w=WORLD[x.c];const isR=x.role!=="E";
-    return `<div class="row"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d">${isR?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`}</div></div><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button></div>`}).join("");
+    return `<div class="row"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d">${isR?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`}</div></div><div class="bg"><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button>${adBtn(x.c)}</div></div>`}).join("");
   }
   else{
   const rows=COUNTRIES.map(x=>{const mine=x.c===S.c;const cut=mine?S.cut/k.base*100+S.defTotal/DEF_PER_PCT:WORLD[x.c].cut;const given=mine?S.given:WORLD[x.c].given;return{x,score:cut+given*0.5,me:mine}}).sort((a,b)=>b.score-a.score);
@@ -506,11 +672,53 @@ function renderLists(force){
   emgDot();affordable();
 }
 // Grey a button out or bring it back without replacing the node.
-function affordable(){document.querySelectorAll("section.on .btn[data-cost]").forEach(b=>{b.disabled=S.coins<+b.dataset.cost})}
+function affordable(){document.querySelectorAll("section.on .btn[data-cost]").forEach(b=>{b.disabled=S.coins<+b.dataset.cost});adSync()}
+
+/* ---------- rewarded ads ---------- */
+let AD=null;
+function adBtn(c){return `<button class="btn ad" data-ad onclick="adGive('${c}')">&#9654; Ad</button>`}
+function adWait(){return Math.max(0,Math.ceil((S.adAt+AD_GAP_MS-Date.now())/1000))}
+// Same rule as the cooldown clock: sync in place, never rebuild the list for it.
+function adSync(){
+  const left=AD_DAY-S.ads,w=adWait(),ok=left>0&&w===0;
+  document.querySelectorAll("section.on [data-ad]").forEach(b=>{b.disabled=!ok});
+  const n=$("#adNote");if(!n||!S.c)return;
+  n.textContent="No coins? ▶ Ad sends 20 for free. The ad money goes to that city. "+
+    (left<=0?"No ads left today.":w?`Next ad in ${w} s. ${left} left today.`:`${left} left today.`);
+}
+function adGive(c){
+  const key=c==="self"?S.c:c,x=COUNTRIES.find(y=>y.c===key);
+  watchAd(`Reward: 20 coins of relief for ${c==="self"?"your own shield":x.n}${emgFind(key)?", counted double":""}.`,()=>give(c,true));
+}
+function watchAd(label,reward,urgent){
+  if(AD)return;
+  if(S.ads>=AD_DAY){toast("That's all the ads for today. Coins still work.");return}
+  if(!urgent&&adWait()){toast(`Next ad in ${adWait()} s.`);return}
+  // An ad counts when it is shown, not when it is finished. That is what the caps are about.
+  S.ads++;S.adAt=Date.now();save();
+  AD={until:Date.now()+AD_SEC*1000,reward,iv:setInterval(adClock,250)};
+  $("#adFor").textContent=label;$("#adLeft").textContent=`${AD_DAY-S.ads} left today`;
+  $("#ad").hidden=false;adClock();
+}
+function adClock(){
+  if(!AD)return;
+  const s=Math.max(0,Math.ceil((AD.until-Date.now())/1000)),b=$("#adDone");
+  b.disabled=s>0;b.textContent=s>0?`Reward in ${s} s`:"Claim reward";
+}
+function adClose(done){
+  if(!AD)return;
+  clearInterval(AD.iv);const r=AD.reward;AD=null;$("#ad").hidden=true;
+  if(done){S.ledger+=AD_USD;r()}
+  render();save();
+}
+$("#adDone").onclick=()=>{if(AD&&Date.now()>=AD.until)adClose(true)};
+$("#adSkip").onclick=()=>adClose(false);
+
 function buy(id,cost){if(S.coins<cost)return;S.coins-=cost;S.upg[id]=(S.upg[id]||0)+1;render();save();if(id==="wind"&&S.upg.wind===1)toast("Three chimneys became turbines. The sky clears a little faster now.")}
-function give(c){if(S.coins<20)return;
+// free = paid by a finished ad instead of the player's coins. Everything else is the same.
+function give(c,free){if(!free&&S.coins<20)return;
   const key=c==="self"?S.c:c, dbl=!!emgFind(key), step=dbl?10:5;
-  S.coins-=20;S.given+=20;
+  if(!free)S.coins-=20;S.given+=20;
   if(c==="self"){S.shield.self=Math.min(100,(S.shield.self||0)+step)}
   else{const x=COUNTRIES.find(y=>y.c===c);
     if(x.role!=="E"){const was=WORLD[c].shield;WORLD[c].shield=Math.min(100,was+step);

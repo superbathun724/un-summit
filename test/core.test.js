@@ -34,7 +34,7 @@ g("S.coins=200");w.render();
 tab("support");
 ok(d.querySelectorAll("#supportList .row").length>0,"support rows rendered");
 const given0=g("S.given");
-click([...d.querySelectorAll("#supportList .btn")][1]);
+click([...d.querySelectorAll("#supportList .btn[data-cost]")][1]);
 ok(g("S.given")===given0+20,"given +20, got "+(g("S.given")-given0));
 
 tab("rank");

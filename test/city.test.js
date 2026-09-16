@@ -217,5 +217,88 @@ console.log("--- task 4: every pilot city names its own infrastructure ---");
   a.w.close();
 }
 
+console.log("--- space bar taps on a laptop ---");
+{
+  const space=(a,target,repeat=false)=>(target||a.d.body).dispatchEvent(
+    new a.w.KeyboardEvent("keydown",{code:"Space",key:" ",repeat,bubbles:true,cancelable:true}));
+  const a=boot("SEO");
+  const t0=a.g("S.tons");
+  space(a);space(a);space(a);
+  ok(a.g("S.tons")===t0-3,"3 presses cut 3 tonnes, got "+(t0-a.g("S.tons")));
+  space(a,null,true);
+  ok(a.g("S.tons")===t0-3,"a held key does not keep tapping");
+  const ev=new a.w.KeyboardEvent("keydown",{code:"Space",key:" ",bubbles:true,cancelable:true});
+  a.$('nav button[data-tab="city"]').dispatchEvent(ev);
+  ok(a.g("S.tons")===t0-4&&ev.defaultPrevented,"space on a focused tab taps instead of clicking it");
+  a.d.body.dispatchEvent(new a.w.KeyboardEvent("keydown",{code:"KeyA",bubbles:true}));
+  ok(a.g("S.tons")===t0-4,"other keys do nothing");
+  a.tab("rank");
+  space(a);
+  ok(a.g("S.tons")===t0-4,"no taps from another tab");
+  a.w.close();
+  const b=boot("SOK");
+  space(b);
+  ok(b.g("S.defTotal")===1,"space builds defence in a defence city");
+  b.w.close();
+}
+
+console.log("--- rewarded ads ---");
+{
+  const a=boot("SEO");
+  const done=()=>{a.g("AD.until=0");a.click(a.$("#adDone"))};
+  a.tab("support");
+  const btns=a.all("#supportList [data-ad]");
+  ok(btns.length===a.all("#supportList .row").length,"every support row has an ad button");
+  ok(btns.every(b=>!b.disabled),"ad buttons start enabled with 0 coins");
+  ok(a.all("#supportList .btn[data-cost]").every(b=>b.disabled),"coin buttons disabled with 0 coins");
+  ok(a.$("#adNote").textContent.includes("10 left today"),"note: "+a.$("#adNote").textContent);
+  const target=a.g("COUNTRIES.find(x=>x.role==='R'&&x.c!=='SEO').c"),sh0=a.g(`WORLD.${target}.shield`);
+  a.g(`adGive('${target}')`);
+  ok(a.$("#ad").hidden===false,"ad page opens");
+  ok(a.$("#adDone").disabled,"reward is locked while the ad plays");
+  a.click(a.$("#adDone"));
+  ok(a.$("#ad").hidden===false,"clicking early does nothing");
+  space:{const t0=a.g("S.tons");a.tab("city");a.d.body.dispatchEvent(new a.w.KeyboardEvent("keydown",{code:"Space",bubbles:true,cancelable:true}));
+    ok(a.g("S.tons")===t0,"space does not tap behind an ad");a.tab("support")}
+  done();
+  ok(a.$("#ad").hidden===true,"ad page closes");
+  ok(a.g(`WORLD.${target}.shield`)===Math.min(100,sh0+5),"relief arrived without coins");
+  ok(a.g("S.coins")===0&&a.g("S.given")===20,"no coins spent, gift counted");
+  ok(Math.abs(a.g("S.ledger")-0.02)<1e-9,"ledger +$0.02");
+  ok(a.all("#supportList [data-ad]").every(b=>b.disabled),"cooldown disables ad buttons");
+  ok(/Next ad in \d+ s\. 9 left today/.test(a.$("#adNote").textContent),"note: "+a.$("#adNote").textContent);
+  a.g(`adGive('${target}')`);
+  ok(a.$("#ad").hidden===true,"no second ad inside the gap");
+  a.g("S.adAt=0");a.g(`adGive('${target}')`);a.click(a.$("#adSkip"));
+  ok(a.$("#ad").hidden===true&&a.g("S.given")===20&&Math.abs(a.g("S.ledger")-0.02)<1e-9,"closing early gives nothing");
+  ok(a.g("S.ads")===2,"a closed ad still counts as shown");
+  a.g("S.ads=10;S.adAt=0");a.g(`adGive('${target}')`);
+  ok(a.$("#ad").hidden===true,"daily cap holds");
+  a.g("S.day='2000-01-01'");a.g("tick()");
+  ok(a.g("S.ads")===0,"cap resets on a new day");
+  a.w.close();
+
+  // Rebuild after a hit: skips the gap, returns exactly what the wave took.
+  const b=boot("SOK");
+  b.g("S.coins=101;S.shield.self=0;S.adAt=Date.now()");
+  b.g("const _r=COUNTRIES.filter(k=>k.role!=='E');Math.random=()=>_r.findIndex(k=>k.c==='SOK')/_r.length+0.001");
+  b.g("disaster()");
+  ok(b.g("S.coins")===80,"wave took 21 (20% rounded against you), coins "+b.g("S.coins"));
+  b.g("S.coins+=7");
+  b.click(b.$("#ta"));
+  ok(b.$("#ad").hidden===false,"rebuild ad opens despite the gap");
+  b.g("AD.until=0");b.click(b.$("#adDone"));
+  ok(b.g("S.coins")===108,"lost 21 returned on top of later earnings, coins "+b.g("S.coins"));
+  b.w.close();
+
+  // Old saves have no ad fields.
+  const c=new JSDOM(html,{runScripts:"dangerously",url:"http://localhost/",pretendToBeVisual:true,
+    beforeParse(w){w.Element.prototype.animate=()=>({cancel(){}});
+      w.localStorage.setItem("yl",JSON.stringify({uid:"dx",c:"SEO",tons:5,coins:3,cut:1,given:0,upg:{},day:"2000-01-01",streak:1,taps:0,ledger:0,shield:{}}))}});
+  c.window.document.querySelector("#startBtn").dispatchEvent(new c.window.MouseEvent("click",{bubbles:true}));
+  ok(c.window.eval("S.ads===0&&S.adAt===0"),"old save gets ad defaults");
+  c.window.close();
+}
+
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);
 process.exit(fails?1:0);
