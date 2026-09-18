@@ -1,0 +1,166 @@
+:root{
+  --sky:#7FC4E8; --smog:#8A7A5A; --sea:#1F5F8B; --deep:#0E2A47;
+  --ink:#16232E; --paper:#EEF3F5; --mist:#D6E0E6; --coin:#F2B134; --alert:#E05A47; --leaf:#4E9F5C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;overscroll-behavior:none}
+body{font-family:"Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--deep);color:var(--ink);display:flex;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#app{width:100%;max-width:420px;min-height:100vh;min-height:100dvh;background:var(--paper);display:flex;flex-direction:column;position:relative;overflow:hidden;padding-bottom:env(safe-area-inset-bottom)}
+
+/* ---------- top bar ---------- */
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;gap:8px}
+.brand{font-weight:800;letter-spacing:-.02em;font-size:16px;white-space:nowrap}
+.hdr{display:flex;align-items:center;gap:6px;min-width:0}
+#chipTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Coins live in the bar, not on the city page: you spend them on the Support page,
+   and you cannot decide what to send if the number is on a screen you just left. */
+.coins{background:var(--coin);color:#3d2a00;border-radius:999px;padding:5px 11px;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.chip{display:flex;align-items:center;gap:6px;background:var(--mist);border-radius:999px;padding:5px 10px 5px 8px;font-size:12.5px;font-weight:600;cursor:pointer}
+.chip .dot{width:9px;height:9px;border-radius:50%}
+.role-E .dot{background:var(--smog)} .role-R .dot{background:var(--sea)} .role-B .dot{background:linear-gradient(90deg,var(--smog) 50%,var(--sea) 50%)}
+
+/* ---------- scene ---------- */
+/* 300px is half of a small phone: the first upgrade fell below the fold and nobody scrolled.
+   svh is the toolbar-visible height, so this does NOT resize while the toolbar hides on scroll.
+   The 240px floor is not arbitrary: the SVG slices from the bottom, and below it the chimney
+   tops (viewBox y=70) get cut off. Never crop the chimneys -- they are what you tap. */
+#scene{position:relative;height:300px;height:clamp(240px,40svh,300px);overflow:hidden;cursor:pointer;touch-action:manipulation;background:linear-gradient(var(--sky),#c9e7f5 70%,var(--sea) 70%,var(--sea))}
+#scene svg{position:absolute;inset:0;width:100%;height:100%}
+#smog{position:absolute;inset:0;background:linear-gradient(var(--smog),rgba(138,122,90,.55) 60%,transparent);pointer-events:none;transition:opacity .35s}
+#scene.shake{animation:shake .5s}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.puff{position:absolute;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.85);pointer-events:none;animation:rise .9s forwards}
+@keyframes rise{to{transform:translateY(-90px) scale(2.4);opacity:0}}
+.pop{position:absolute;font-weight:800;color:var(--coin);text-shadow:0 1px 0 #7a4b00;pointer-events:none;animation:popup .7s forwards;font-size:18px}
+@keyframes popup{to{transform:translateY(-50px);opacity:0}}
+/* A defence tap drops a block onto the wall instead of releasing a puff upward.
+   Emissions leave the city; protection is added to it. The motion says which one you are doing. */
+.puff.brick{border-radius:3px;background:#A8C6D8;animation:drop .8s forwards}
+@keyframes drop{to{transform:translateY(70px) scale(.6);opacity:0}}
+.pop.def{color:#DBE9F1;text-shadow:0 1px 0 #1F5F8B}
+.pop.up{color:#8FE3A0;text-shadow:0 1px 0 #1B5A2A;font-size:16px}
+#hint{position:absolute;left:0;right:0;top:12px;text-align:center;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);font-size:15px;pointer-events:none}
+#wave{position:absolute;left:-100%;bottom:0;width:100%;height:120px;background:radial-gradient(ellipse at 50% 100%,rgba(14,42,71,.9),rgba(14,42,71,0) 70%);pointer-events:none;transition:left 1.2s ease-in}
+#wave.on{left:0}
+/* Scenery motion stays small and slow: it is background, and the taps are the show.
+   Animated wrappers never carry a transform attribute -- CSS would overwrite it. */
+/* fill-box only on these: the turbine rotors spin around their own 0,0 and must keep view-box. */
+.drift,.bob,.cross,.sway,.cable,.fly{transform-box:fill-box}
+.shim{animation:shim 3s ease-in-out infinite alternate}
+@keyframes shim{from{opacity:.15}}
+.drift{animation:drift 16s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translateX(34px)}}
+.bob{transform-origin:50% 100%;animation:bob 2.8s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(-1.5px) rotate(-2deg)}to{transform:translateY(1.5px) rotate(2deg)}}
+.cross{animation:cross 22s linear infinite}
+@keyframes cross{from{transform:translateX(-160px)}to{transform:translateX(580px)}}
+.blink{animation:blink 2.4s steps(1) infinite}
+@keyframes blink{50%{opacity:.1}}
+.glow{animation:glow 1.7s ease-in-out infinite alternate}
+@keyframes glow{from{opacity:.35}}
+.sway{transform-origin:50% 0;animation:sway 3.6s ease-in-out infinite alternate}
+@keyframes sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+.cable{animation:cable 14s ease-in-out infinite alternate}
+@keyframes cable{to{transform:translate(120px,-48px)}}
+.fly{animation:fly 9s ease-in-out infinite alternate}
+@keyframes fly{to{transform:translate(70px,-12px)}}
+
+/* ---------- mode switch (cities that do both) ---------- */
+#modeSw{display:flex;margin:10px 16px 0;background:var(--mist);border-radius:12px;padding:3px}
+#modeSw[hidden]{display:none}
+#modeSw button{flex:1;border:0;background:transparent;padding:8px;border-radius:9px;font-weight:700;font-size:13.5px;color:#5b6b78;cursor:pointer}
+#modeSw button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* ---------- meters ---------- */
+/* Flex, not a 2-column grid: a city with only one job shows one card and it fills the row. */
+#meters{display:flex;gap:10px;padding:12px 16px 4px}
+.meter{flex:1;min-width:0;background:#fff;border-radius:14px;padding:10px 12px}
+.meter[hidden]{display:none}
+.meter.active{outline:2px solid var(--deep)}
+.meter b{display:block;font-size:22px;letter-spacing:-.02em}
+.meter small{color:#5b6b78;font-size:12px}
+#streak{display:block;margin-top:5px}
+.bar{height:6px;background:var(--mist);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--leaf);width:0;transition:width .3s}
+#mDef .bar i{background:var(--sea)}
+#ticker{margin:6px 16px 0;font-size:12.5px;color:#3c4d5a;min-height:18px}
+#ticker.bad{color:var(--alert);font-weight:600}
+#ticker.good{color:var(--leaf);font-weight:600}
+
+/* ---------- tabs ---------- */
+nav{display:flex;margin:10px 16px 0;background:var(--mist);border-radius:12px;padding:3px}
+nav button{flex:1;border:0;background:transparent;padding:8px 4px;border-radius:9px;font-weight:700;font-size:13.5px;color:#5b6b78;cursor:pointer;white-space:nowrap}
+nav button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+nav button.alert::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--alert);margin-left:5px;vertical-align:middle;animation:blip 1.1s infinite}
+@keyframes blip{50%{opacity:.2}}
+/* Amber, not red, and it does not blink: red means a wave has landed somewhere. This only
+   means the city has not answered its own question yet. */
+nav button.new::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--coin);margin-left:5px;vertical-align:middle}
+section{padding:12px 16px 24px;display:none}
+section.on{display:block}
+/* My City is one page: the scene, the meters and the upgrades. The scene runs edge to edge,
+   so the page itself carries no side padding and the text block below brings its own. */
+#city{padding:10px 0 0}
+.pad{padding:12px 16px 24px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:14px;padding:12px;margin-bottom:8px}
+.row .t{font-weight:700;font-size:15px}
+.row .d{font-size:12.5px;color:#5b6b78;margin-top:2px}
+.btn{border:0;background:var(--deep);color:#fff;font-weight:700;padding:9px 13px;border-radius:10px;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn.coin{background:var(--coin);color:#3d2a00}
+.btn:disabled{opacity:.35;cursor:default}
+.rank{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:9px 12px;background:#fff;border-radius:12px;margin-bottom:6px;font-size:14px}
+.rank.me{outline:2px solid var(--coin)}
+.rank .n{font-weight:800;color:#5b6b78}
+.rank .v{font-weight:700}
+.tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--mist);color:#3c4d5a;margin-left:6px;vertical-align:middle}
+.tag.E{background:#e7e0d0;color:#5c4a24}.tag.R{background:#d5e6f2;color:#123e5e}.tag.B{background:linear-gradient(90deg,#e7e0d0,#d5e6f2);color:#333}
+p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
+
+/* ---------- voice ---------- */
+.poll{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:6px}
+.poll.mine{outline:2px solid var(--coin)}
+.poll .pt{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:700}
+.poll .pt b{font-variant-numeric:tabular-nums}
+.poll .pb{height:8px;background:var(--mist);border-radius:4px;margin-top:7px;overflow:hidden}
+.poll .pb i{display:block;height:100%;background:var(--sea);width:0;transition:width .4s}
+#noteCard{display:block}
+/* The body forbids selection so a drag on the city never highlights it. The one place a
+   player types has to opt back in, or the text cannot be corrected. */
+#noteBox{width:100%;margin-top:9px;padding:10px;border:1.5px solid var(--mist);border-radius:10px;font:inherit;font-size:14px;resize:none;user-select:text;-webkit-user-select:text;color:var(--ink);background:#fff}
+#noteBox:focus{outline:2px solid var(--deep);border-color:transparent}
+#noteSend{margin-top:9px}
+
+/* ---------- live disaster ---------- */
+/* Pinned to the top of Support for 3 minutes. Relief sent inside the window counts double,
+   because that is when it matters: the water is still there and nobody has paid yet. */
+.row.emg{background:#FDEDEA;outline:2px solid var(--alert);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{outline-color:rgba(224,90,71,.3)}}
+.row.emg .t{color:#9B2C1B}
+.row.emg .d{color:#7A4A40}
+.clock{font-variant-numeric:tabular-nums;font-weight:800;color:var(--alert)}
+.tag.SOS{background:var(--alert);color:#fff}
+
+/* ---------- overlay ---------- */
+#gate{position:absolute;inset:0;background:var(--deep);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:32px 28px;z-index:10}
+#gate h1{font-size:34px;line-height:1.05;letter-spacing:-.03em;margin-bottom:10px}
+#gate p{color:#b9cbdc;line-height:1.5;margin-bottom:18px;font-size:15px}
+#gate select{width:100%;padding:12px;border-radius:12px;border:0;font-size:16px;margin-bottom:12px;background:#fff;color:var(--ink)}
+#gate .btn{width:100%;padding:14px;font-size:16px;background:var(--coin);color:#3d2a00}
+#gate .why{font-size:12.5px;color:#8fa6ba;margin-top:14px;line-height:1.5}
+.toast{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:388px;bottom:calc(18px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;z-index:9;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:in .25s}
+@keyframes in{from{transform:translate(-50%,12px);opacity:0}}
+
+/* ---------- ad (stand-in until a real rewarded-ad network is connected) ---------- */
+#ad{position:absolute;inset:0;background:var(--deep);color:#fff;display:flex;flex-direction:column;padding:16px 20px 24px;z-index:20;gap:12px}
+#ad[hidden]{display:none}
+.adtop{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#b9cbdc}
+.adtag{background:var(--coin);color:#3d2a00;font-weight:800;border-radius:6px;padding:2px 7px}
+.adbox{flex:1;border:2px dashed #3d5a78;border-radius:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px;gap:8px}
+.adbox b{font-size:28px;letter-spacing:-.02em}
+.adbox span{color:#8fa6ba;font-size:13.5px;line-height:1.5}
+#adFor{font-size:14px;line-height:1.45;color:#dbe9f1}
+#adDone{padding:14px;font-size:16px}
+#adSkip{background:transparent;border:0;color:#8fa6ba;font-size:13px;padding:6px;cursor:pointer}
+.bg{display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.btn.ad{background:#fff;color:var(--deep);box-shadow:inset 0 0 0 1.5px var(--deep);padding:6px 10px;font-size:12.5px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

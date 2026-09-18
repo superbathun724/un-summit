@@ -1,5 +1,15 @@
 const {JSDOM}=require("jsdom"),fs=require("fs"),path=require("path");
-const html=fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8");
+// The app ships as three files. jsdom fetches <link> and <script src> asynchronously, and
+// these tests are synchronous, so the harness inlines them here. What runs is still exactly
+// what the browser ends up with -- and if a file is renamed, every test fails at once.
+const dir=path.join(__dirname,"..");
+const read=f=>fs.readFileSync(path.join(dir,f),"utf8");
+const html=(()=>{
+  let h=read("index.html");
+  const link='<link rel="stylesheet" href="styles.css">',tag='<script src="app.js"></script>';
+  if(!h.includes(link)||!h.includes(tag))throw new Error("index.html no longer links styles.css and app.js");
+  return h.replace(link,"<style>"+read("styles.css")+"</style>").replace(tag,"<script>"+read("app.js")+"</script>");
+})();
 let fails=0,passes=0;
 const ok=(c,m)=>{c?passes++:(fails++,console.log("  FAIL: "+m));};
 const dom=new JSDOM(html,{runScripts:"dangerously",url:"http://localhost/",pretendToBeVisual:true,

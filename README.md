@@ -4,6 +4,22 @@ A casual click game. What a tap does depends on your city: a high-emission city 
 
 Built by SeYeon, MinChae, JiHun — Hyundai Chungun High School, Ulsan, for the 2026 World Tsunami Awareness Day High School Summit.
 
+## City data (placeholder)
+
+Each city's role (high-emission / disaster-risk / both), its starting daily tonnes and its
+population are **placeholders**. They have not been replaced with published figures yet.
+When they are, record the source and the year here:
+
+| field | source to use | year |
+|---|---|---|
+| `role`, `base` | Greenhouse Gas Inventory and Research Center (local government emissions) | — |
+| `role` (risk) | Ministry of the Interior and Safety disaster statistics | — |
+| `pop` | KOSIS resident registration | — |
+
+`pop` is carried but not scored. The ranking is a per-player average, so population cancels
+out; the field exists so that adding "what share of this city turned up" later is a formula
+change rather than a data migration. See `HANDOVER.md` §6.
+
 ## Run locally
 Open `index.html` in a browser. No build step.
 
