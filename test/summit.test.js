@@ -173,5 +173,61 @@ console.log("--- summit 2: the toast never hides the last row ---");
   a.w.close();
 }
 
+console.log("--- summit 3: a send on Support follows what the city voted for ---");
+{
+  // Every other city's card carries one line: what it voted for, from its own ladder.
+  let a=boot("BUS");a.tab("support");
+  const cards=a.all("#supportList [data-city]");
+  ok(cards.length===11,"eleven other cities listed, got "+cards.length);
+  cards.forEach(r=>{
+    const c=r.dataset.city,opts=a.g(`pollSet('${c}').opts`),line=r.querySelector(".vote");
+    ok(!!line&&/^Voted for: /.test(line.textContent),c+" has a vote line: "+(line&&line.textContent));
+    ok(line&&opts.includes(line.textContent.replace("Voted for: ","")),c+" voted from its own list: "+(line&&line.textContent));
+  });
+  const busanOpts=a.g("pollSet('BUS').opts");
+  const lines=JSON.stringify(cards.map(r=>r.querySelector(".vote").textContent));
+  // Seeded votes shown next to real send buttons must say what they are, on this page, not
+  // only on Voice: someone who opens Support alone would read them as real ballots.
+  const note=a.$("#support p.note").textContent;
+  ok(note.includes("Other cities' votes are sample data until the pilot starts."),"Support says the other votes are sample data: "+note);
+  ok(a.$("#support").contains(a.$("#voteSample"))&&!a.$("#voteSample").hidden,"and it is visible on the Support page itself");
+  // the send buttons were not touched
+  ok(cards.every(r=>/^(Build|Tech) 20$/.test(r.querySelector(".btn[data-cost]").textContent)),"send labels unchanged");
+
+  // My own city: not voted yet -> a way to Voice.
+  const mine=a.$("#supportList [data-self] .vote");
+  ok(mine&&mine.textContent==="Not voted yet — go to Voice","own row asks for a vote: "+(mine&&mine.textContent));
+  a.click(mine);
+  ok(a.$("#voice").classList.contains("on"),"and pressing it opens Voice");
+  a.g("vote(2)");
+  a.tab("support");
+  ok(a.$("#supportList [data-self] .vote").textContent==="Voted for: "+busanOpts[2],
+     "after voting the own row shows the pick: "+a.$("#supportList [data-self] .vote").textContent);
+  a.tab("voice");a.g("vote(0)");a.tab("support");
+  ok(a.$("#supportList [data-self] .vote").textContent==="Voted for: "+busanOpts[0],"and follows a changed vote");
+  // an emergency row carries it too
+  a.g("emgAdd('GAN')");a.tab("support");
+  ok(/^Voted for: /.test(a.$('#supportList [data-emgrow="GAN"] .vote').textContent),"a red card carries the line too");
+  a.w.close();
+
+  // Same day, a reload: the other cities' votes do not move.
+  a=boot("BUS");a.tab("support");
+  ok(JSON.stringify(a.all("#supportList [data-city] .vote").map(e=>e.textContent))===lines,"a reload the same day shows the same votes");
+  // A new day may move them, and the rows are rebuilt for it.
+  const days=new Set(["2026-01-01","2026-01-02","2026-01-03","2026-01-04","2026-01-05"].map(d=>
+    a.g(`(()=>{const t=today;today=()=>"${d}";const v=COUNTRIES.map(x=>votedFor(x.c)).join();today=t;return v})()`)));
+  ok(days.size>1,"different days give different votes");
+  a.w.close();
+
+  // An emission city has no shield row; its own vote still shows, without a send button.
+  a=boot("SEO");a.tab("support");
+  const m=a.$("#supportList [data-mine]");
+  ok(!!m&&/Not voted yet/.test(m.textContent),"an emission city sees its own vote line");
+  ok(!m.querySelector(".btn"),"and it offers nothing to send to yourself");
+  a.g("vote(1)");a.tab("support");
+  ok(a.$("#supportList [data-mine] .vote").textContent==="Voted for: "+a.g("pollSet().opts[1]"),"and shows its pick");
+  a.w.close();
+}
+
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);
 process.exit(fails?1:0);

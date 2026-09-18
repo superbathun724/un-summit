@@ -166,7 +166,7 @@ function emgClocks(){const now=Date.now();document.querySelectorAll("[data-emg]"
 function emgRow(e){
   const x=COUNTRIES.find(y=>y.c===e.c),mine=x.c===S.c;
   return `<div class="row emg" data-emgrow="${e.c}"><div><div class="t">${mine?"Your city":x.n} was hit <span class="tag SOS">LIVE</span></div>`+
-    `<div class="d">Shield <span data-v></span>. Relief counts double for <span class="clock" data-emg="${e.c}">3:00</span></div></div>`+
+    `<div class="d">Shield <span data-v></span>. Relief counts double for <span class="clock" data-emg="${e.c}">3:00</span></div>${voteLine(e.c)}</div>`+
     `<div class="bg"><button class="btn coin" data-cost="20" onclick="give('${mine?"self":e.c}')">20 &rarr; +10%</button>${adBtn(mine?"self":e.c)}</div></div>`;
 }
 
@@ -661,7 +661,7 @@ function renderLists(force){
   const sig=tab==="voice"?["voice",S.vote,S.notes.length].join("|")
     :tab==="city"?["city",mode()].join("|")
     :tab==="rank"?["rank",Math.round(dayScore()*10),worldStamp].join("|")
-    :["support",worldStamp,k.role,(S.shield.self||0)>=SELF_MAX?1:0].join("|");
+    :["support",worldStamp,k.role,(S.shield.self||0)>=SELF_MAX?1:0,S.vote,today()].join("|");
   if(force||sig!==listSig){
   listSig=sig;
   if(tab==="city"){
@@ -681,11 +681,14 @@ function renderLists(force){
   const sh=S.shield.self||0, capped=sh>=SELF_MAX;
   const selfRow=(k.role!=="E"&&!emgFind(S.c))?`<div class="row" data-self><div><div class="t">Your own shield <span class="tag R" data-v></span></div><div class="d">${capped
       ?`Your own work stops here. Only another city's relief reaches ${SAFE}%.`
-      :`Seawall + early warning. Your own coins raise this to ${SELF_MAX}%; a wave holds at ${SAFE}%.`}</div></div>${capped
+      :`Seawall + early warning. Your own coins raise this to ${SELF_MAX}%; a wave holds at ${SAFE}%.`}</div>${voteLine(S.c)}</div>${capped
       ?""
       :`<div class="bg"><button class="btn" data-cost="20" onclick="give('self')">20 → +5%</button>${adBtn("self")}</div>`}</div>`:"";
-  $("#supportList").innerHTML=EMG.map(emgRow).join("")+selfRow+targets.map(x=>{const isR=x.role!=="E";
-    return `<div class="row" data-city="${x.c}"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d" data-v></div></div><div class="bg"><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button>${adBtn(x.c)}</div></div>`}).join("");
+  // An emission city has no shield row of its own, but it voted too. Not a .row: there is
+  // nothing to send to yourself here, and every row on this page is somewhere coins can go.
+  const mineRow=k.role==="E"?`<div class="minevote" data-mine><span>${k.n} <span class="tag">your city</span></span>${voteLine(S.c)}</div>`:"";
+  $("#supportList").innerHTML=EMG.map(emgRow).join("")+selfRow+mineRow+targets.map(x=>{const isR=x.role!=="E";
+    return `<div class="row" data-city="${x.c}"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d" data-v></div>${voteLine(x.c)}</div><div class="bg"><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button>${adBtn(x.c)}</div></div>`}).join("");
   }
   else{
   const rows=COUNTRIES.map(x=>{const mine=x.c===S.c;return{x,score:mine?dayScore():WORLD[x.c].score,me:mine}}).sort((a,b)=>b.score-a.score);
@@ -733,8 +736,8 @@ function affordable(){document.querySelectorAll("section.on .btn[data-cost]").fo
 // A service for under-18s with no moderator on duty cannot host a feed, and a static site
 // could not carry one anyway. What comes back is the point -- the game is the means, the
 // resilience these players ask for is the end.
-function pollSet(){
-  const k=me(),lane=k.role==="E"?"cut":"def",a=(LOCAL[S.c]||{})[lane];
+function pollSet(c=S.c){
+  const k=COUNTRIES.find(x=>x.c===c),lane=k.role==="E"?"cut":"def",a=(LOCAL[c]||{})[lane];
   return {lane,
     q:k.role==="E"?`What should ${k.n} cut first?`:`What does ${k.n} need most?`,
     opts:(lane==="def"?UP_DEF:UP_CUT).map((u,i)=>(a&&a[i])||u.n)};
@@ -754,6 +757,22 @@ function pollPct(c,tot){
   if(d)p[p.indexOf(Math.max(...p))]+=d;
   return p;
 }
+// What each other city voted for today, so a send on Support can follow a city's own ask.
+// Seeded by date and city like WORLD: the same all day, a new one tomorrow. A stand-in until a
+// server counts real ballots, the same as every other number about another city here.
+function pollCountsFor(c){const r=seed(today()+c+"poll");return [0,0,0,0].map(()=>8+Math.round(r()*84))}
+function votedFor(c){
+  const p=pollSet(c);
+  if(c===S.c)return S.vote!=null?p.opts[S.vote]:null;
+  const n=pollCountsFor(c);return p.opts[n.indexOf(Math.max(...n))];
+}
+// One line under a Support card. The player's own city points back at Voice until it has answered.
+function voteLine(c){
+  const v=votedFor(c);
+  return v?`<div class="d vote">Voted for: <b>${v}</b></div>`
+    :`<button class="d vote go" onclick="goTab('voice')">Not voted yet — go to Voice</button>`;
+}
+function goTab(t){document.querySelector(`nav button[data-tab="${t}"]`).click()}
 function renderVoice(){
   const p=pollSet(),c=pollCounts(),tot=c.reduce((a,b)=>a+b,0),voted=S.vote!=null,pc=pollPct(c,tot);
   $("#pollQ").textContent=p.q;
