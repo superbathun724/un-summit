@@ -269,5 +269,65 @@ console.log("--- summit 4: Ranking shows where your own score is heading ---");
   a.w.close();
 }
 
+console.log("--- summit 5: the Voice tally, and what it admits about itself ---");
+{
+  const PHRASE="Sample distribution — no server yet. Real counts start with the pilot.";
+  // Same shape as DATA_SOURCED: the build says whether its counts are real, and the screen
+  // has to agree with it. While they are not, the label is there, visible, next to the bars.
+  const m=/const VOTES_REAL=(true|false);/.exec(read("app.js"));
+  ok(!!m,"the build says whether its vote counts are real");
+  const real=m&&m[1]==="true";
+  let a=boot("BUS");a.tab("voice");
+  ok(a.$("#pollSample").hidden===true,"no label before there is a tally to label");
+  ok(a.all("#pollList .poll").length===0,"and no bars");
+  a.g("vote(1)");
+  if(!real){
+    const lab=a.$("#pollSample");
+    ok(lab.hidden===false&&lab.textContent.includes(PHRASE),"after voting the sample label is shown: "+lab.textContent);
+    ok(lab.nextElementSibling===a.$("#pollList"),"directly above the bars, not somewhere below them");
+    ok(a.$("#voice").contains(lab)&&a.$("#voice").classList.contains("on"),"on the same page as the tally");
+    const css=read("styles.css"),fs=(/\.sample\{[^}]*font-size:(\d+(?:\.\d+)?)px/.exec(css)||[])[1];
+    ok(+fs>=14,"at body size, not a footnote: "+fs+"px");
+    ok(!/\.sample\{[^}]*opacity/.test(css),"and not faded");
+    ok(!a.$("#voteSample").hidden&&a.$("#voteSample").textContent==="Other cities' votes are sample data until the pilot starts.",
+       "Support carries its own sample line");
+  }else{
+    ok(a.$("#pollSample").hidden===true,"a build with real counts drops the sample label");
+  }
+
+  // Counts are spelled out: six sample votes and one real one.
+  const counts=a.all("#pollList .pn small").map(e=>parseInt(e.textContent));
+  const sample=a.g("pollCountsFor(S.c)");
+  ok(counts.length===4,"every option shows its vote count");
+  ok(counts.join()===sample.map((v,i)=>v+(i===1?1:0)).join(),"the counts are the sample plus exactly your one vote: "+counts.join(","));
+  ok(a.$("#pollTot").textContent===`${counts.reduce((x,y)=>x+y,0)} votes (1 yours)`,"and the total says so: "+a.$("#pollTot").textContent);
+  ok(counts.reduce((x,y)=>x+y,0)===7,"a handful, not a turnout");
+  const pc=a.all("#pollList .pt b").map(e=>parseInt(e.textContent));
+  ok(pc.reduce((x,y)=>x+y,0)===100,"percentages still add up to 100: "+pc.join("+"));
+  ok(pc.every((p,i)=>Math.abs(p-100*counts[i]/7)<=1.5),"and match the counts shown: "+pc.join("/"));
+  const picks=a.all("#pollList .poll.mine");
+  ok(picks.length===1&&picks[0]===a.all("#pollList .poll")[1]&&/Your pick/.test(picks[0].textContent),"'Your pick' marks the one you chose");
+
+  // Tap another option to move the vote. No daily limit while the counts are a sample.
+  for(const i of [3,0,2,2,1]){
+    a.click(a.all("#pollList .poll")[i]);
+    ok(a.g("S.vote")===i,"tapping option "+i+" moves the pick, got "+a.g("S.vote"));
+  }
+  const after=a.all("#pollList .pn small").map(e=>parseInt(e.textContent));
+  ok(after.reduce((x,y)=>x+y,0)===7,"changing never adds votes: still 7");
+  ok(a.all("#pollList .poll.mine").length===1,"and only one pick is marked");
+
+  // Same day, same sample -- and the same first place Support shows for another city.
+  const b=boot("BUS");
+  ok(b.g("JSON.stringify(pollCountsFor('BUS'))")===a.g("JSON.stringify(pollCountsFor('BUS'))"),"a reload the same day gives the same sample");
+  a.w.close();b.w.close();
+  a=boot("SOK");a.tab("support");
+  const sc=a.g("pollCountsFor('BUS')"),opts=a.g("pollSet('BUS').opts");
+  ok(new Set(sc).size===4,"a sample never ties for first place: "+sc.join(","));
+  ok(a.$('#supportList [data-city="BUS"] .vote').textContent==="Voted for: "+opts[sc.indexOf(3)],
+     "Support names the option Voice would show on top: "+a.$('#supportList [data-city="BUS"] .vote').textContent);
+  a.w.close();
+}
+
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);
 process.exit(fails?1:0);

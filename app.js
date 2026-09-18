@@ -7,6 +7,10 @@
 // Flip this in the same commit that replaces the numbers, and fill in the year column in
 // README. A test checks the claim and the flag agree, so they cannot drift apart again.
 const DATA_SOURCED=false;
+// Are the Voice counts real ballots yet? They are not: no server counts them. While this is
+// false the tally on Voice and the other cities' votes on Support say "sample" on the same
+// screen as the numbers -- same reason as DATA_SOURCED, and a test ties the two together.
+const VOTES_REAL=false;
 // ?demo=1 -- the summit stage. Four minutes, no waiting: the day opens half done, a wave has
 // already landed somewhere, and nothing about it is ever written to this phone. See demoSeed().
 const DEMO=/[?&]demo=1(&|$)/.test(location.search);
@@ -223,6 +227,7 @@ $("#gateWhy").textContent=DATA_SOURCED
   :"Pick your city. Industrial cities cut emissions, coastal cities build protection, and some do both. These roles are our own first estimate — we have not replaced them with published figures yet.";
 // Small, but always on screen: a judge must never read a staged day as real data.
 $("#demoTag").hidden=!DEMO;
+$("#voteSample").hidden=VOTES_REAL;
 const sel=$("#countrySel");
 COUNTRIES.forEach(k=>{const o=document.createElement("option");o.value=k.c;o.textContent=`${k.n} — ${ROLE_LABEL[k.role]}`;sel.appendChild(o)});
 (function guessCountry(){
@@ -759,8 +764,9 @@ function pollSet(c=S.c){
 // Stand-in counts, seeded by the city so they hold still between visits. Labelled as a
 // stand-in on screen: a made-up number presented as a real tally is the one thing that
 // would not survive being asked about.
+// The sample for this city today, plus the player's own vote, which is the one real ballot here.
 function pollCounts(){
-  const r=seed(S.c+"poll"),c=[0,0,0,0].map(()=>8+Math.round(r()*84));
+  const c=pollCountsFor(S.c);
   if(S.vote!=null)c[S.vote]++;
   return c;
 }
@@ -774,7 +780,15 @@ function pollPct(c,tot){
 // What each other city voted for today, so a send on Support can follow a city's own ask.
 // Seeded by date and city like WORLD: the same all day, a new one tomorrow. A stand-in until a
 // server counts real ballots, the same as every other number about another city here.
-function pollCountsFor(c){const r=seed(today()+c+"poll");return [0,0,0,0].map(()=>8+Math.round(r()*84))}
+// Deliberately tiny: 0, 1, 2 and 3 votes, shuffled per city per day -- six in all. A sample of a
+// few votes shown as a few votes cannot be mistaken for a city turning out; two hundred invented
+// ballots could. Distinct counts also mean one clear first place, so Support's "Voted for" never
+// has to break a tie, and one more vote never flattens the bars into four equal quarters.
+function pollCountsFor(c){
+  const r=seed(today()+c+"poll"),n=[0,1,2,3];
+  for(let i=3;i>0;i--){const j=Math.floor(r()*(i+1));[n[i],n[j]]=[n[j],n[i]]}
+  return n;
+}
 function votedFor(c){
   const p=pollSet(c);
   if(c===S.c)return S.vote!=null?p.opts[S.vote]:null;
@@ -790,13 +804,18 @@ function goTab(t){document.querySelector(`nav button[data-tab="${t}"]`).click()}
 function renderVoice(){
   const p=pollSet(),c=pollCounts(),tot=c.reduce((a,b)=>a+b,0),voted=S.vote!=null,pc=pollPct(c,tot);
   $("#pollQ").textContent=p.q;
+  // Right above the bars, body size, whenever there are bars. The vote count is spelled out
+  // too: a percentage alone hides that the sample is a handful of votes, one of them yours.
+  $("#pollSample").hidden=!voted||VOTES_REAL;
+  $("#pollTot").textContent=voted?`${tot} votes (1 yours)`:"";
+  // Every option stays a button after voting: tap another and the pick moves. No daily limit
+  // while the tally is a sample -- a mis-tap on stage has to be undoable. Add one with the server.
   $("#pollList").innerHTML=voted
     ? p.opts.map((n,i)=>
-        `<div class="poll${i===S.vote?" mine":""}"><div class="pt"><span>${n}${i===S.vote?' <span class="tag">your answer</span>':""}</span><b>${pc[i]}%</b></div><div class="pb"><i style="width:${pc[i]}%"></i></div></div>`).join("")
-      +`<div class="row"><div><div class="d">You can change your answer any time.</div></div><button class="btn" onclick="vote(null)">Change</button></div>`
+        `<button class="poll${i===S.vote?" mine":""}" onclick="vote(${i})"><div class="pt"><span>${n}${i===S.vote?' <span class="tag">Your pick</span>':""}</span><span class="pn"><small>${c[i]} vote${c[i]>1?"s":""}</small> <b>${pc[i]}%</b></span></div><div class="pb"><i style="width:${pc[i]}%"></i></div></button>`).join("")
     : p.opts.map((n,i)=>`<div class="row"><div><div class="t">${n}</div></div><button class="btn" onclick="vote(${i})">Pick</button></div>`).join("");
   $("#pollNote").textContent=voted
-    ?`${tot} answers so far. The tally is a stand-in until the server is connected; your own answer is saved on this phone.`
+    ?"Tap another option to change your pick. The tally is a stand-in until the server is connected; your own answer is saved on this phone."
     :"Pick one. Nobody is asked to be right — this is what the city itself would fund first.";
   // The notes were write-only: you typed one, it vanished, and there was no way to tell
   // whether anything had happened to it. They live on this phone, so show them.

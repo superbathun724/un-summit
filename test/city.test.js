@@ -369,8 +369,10 @@ console.log("--- task 5: the city answers for itself ---");
   ok(n.g("S.notes[0].c")==="MOK"&&n.g("S.notes[0].t").includes("drain"),"note keeps the city and the text");
   ok(n.$("#noteBox").value==="","the box is cleared after sending");
   ok(n.$("#noteLog").textContent.includes("1 note"),"log: "+n.$("#noteLog").textContent);
-  n.tab("support");ok(!n.$("#support").textContent.includes("drain"),"a note never reaches Support");
-  n.tab("rank");ok(!n.$("#rank").textContent.includes("drain"),"a note never reaches Ranking");
+  // "our street", not "drain": Support now shows each city's vote, and some cities' ballots
+  // are drainage works. The note's own words are what must never appear there.
+  n.tab("support");ok(!n.$("#support").textContent.includes("our street"),"a note never reaches Support");
+  n.tab("rank");ok(!n.$("#rank").textContent.includes("our street"),"a note never reaches Ranking");
   n.g("flush()");
   ok(JSON.parse(n.w.localStorage.getItem("yl")).notes.length===1,"note survives a save");
 
@@ -879,8 +881,8 @@ console.log("--- task 12: reported from a phone ---");
   ok(/Nothing has been sent yet/.test(a.$("#toast").textContent),"the confirmation says so too: "+a.$("#toast").textContent);
 
   // it is still not readable by anyone else, which is the whole design
-  a.tab("support");ok(!a.$("#support").textContent.includes("drain"),"still never reaches Support");
-  a.tab("rank");ok(!a.$("#rank").textContent.includes("drain"),"still never reaches Ranking");
+  a.tab("support");ok(!a.$("#support").textContent.includes("our street"),"still never reaches Support");
+  a.tab("rank");ok(!a.$("#rank").textContent.includes("our street"),"still never reaches Ranking");
   a.tab("voice");
 
   // their own sentence goes back in as HTML, so it has to be escaped
