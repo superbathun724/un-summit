@@ -894,11 +894,25 @@ function puff(x,y,label,kind){const p=document.createElement("div");p.className=
   pop(x+10,y-20,label,kind)}
 function pop(x,y,label,kind){const q=document.createElement("div");q.className="pop"+(kind==="def"||kind==="up"?" "+kind:"");
   q.textContent=label;q.style.left=x+"px";q.style.top=y+"px";$("#scene").appendChild(q);setTimeout(()=>q.remove(),700)}
-let tt;function toast(msg,action,label){const t=$("#toast");t.style.display="block";t.innerHTML=msg+(action?` <button class="btn coin" style="margin-top:8px;display:block" id="ta">${label}</button>`:"");
-  if(action)$("#ta").onclick=()=>{action();t.style.display="none"};clearTimeout(tt);tt=setTimeout(()=>t.style.display="none",action?12000:4500)}
+// The toast sits fixed over the bottom of the screen, which is exactly where the last Support
+// row and the ad ledger are. So: while it is up, every page gets that much room below its last
+// row (#app.toasting, --toastH), a plain toast lets taps through to whatever is under it, and
+// changing tab clears it. An offer with a button is different: it waits for the player and
+// carries its own x, because a wave's rebuild ad timing out unread is coins the player lost.
+let tt=null;
+function toastOff(){clearTimeout(tt);tt=null;const t=$("#toast");t.style.display="none";t.classList.remove("act");$("#app").classList.remove("toasting")}
+function toast(msg,action,label){
+  const t=$("#toast");clearTimeout(tt);tt=null;
+  t.innerHTML=msg+(action?`<button class="x" id="tx" aria-label="close">&times;</button><button class="btn coin" style="margin-top:8px;display:block" id="ta">${label}</button>`:"");
+  t.classList.toggle("act",!!action);t.style.display="block";
+  $("#app").classList.add("toasting");$("#app").style.setProperty("--toastH",t.offsetHeight+"px");
+  if(action){$("#ta").onclick=()=>{toastOff();action()};$("#tx").onclick=toastOff}
+  else tt=setTimeout(toastOff,4500);
+}
 function fact(m){toast(m)}
 function ticker(m,cls,flash){const t=$("#ticker");t.textContent=m;t.className=(cls||"")+(flash?" hit":"")}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab));
+  if(!$("#toast").classList.contains("act"))toastOff();
   if(DEMO&&demoWavePending&&b.dataset.tab==="support")demoWave();
   if(S.c)renderLists(true)});
 document.querySelectorAll("#modeSw button").forEach(b=>b.onclick=()=>{

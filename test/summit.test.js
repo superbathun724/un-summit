@@ -131,5 +131,47 @@ console.log("--- summit 1: ?demo=1 stages a day and never saves it ---");
     ok(b.g("DEMO")===false,q+" is not a demo");b.w.close()});
 }
 
+console.log("--- summit 2: the toast never hides the last row ---");
+{
+  const css=read("styles.css");
+  const shown=a=>a.$("#toast").style.display!=="none";
+  let a=boot("ULS");
+  a.g("toastOff()");
+  a.tap(25);                                        // the 25th tap raises a FACTS toast
+  ok(shown(a)&&a.g("tt")!==null,"the fact toast is up, with its timer");
+  ok(a.$("#app").classList.contains("toasting"),"and the page knows a toast is up");
+  a.tab("rank");
+  ok(!shown(a),"changing tab closes it at once");
+  ok(a.g("tt")===null,"and its timer is cleared, so it cannot fire later");
+  ok(!a.$("#app").classList.contains("toasting"),"and the extra room goes away with it");
+  ok(/\$\d/.test(a.$("#ledger").textContent),"the ledger amount is there: "+a.$("#ledger").textContent);
+
+  // Room below the last row while a toast is up, on every page that scrolls.
+  ok(/#app\.toasting section:not\(#city\),#app\.toasting \.pad\{padding-bottom:calc\(var\(--toastH/.test(css),
+     "every page gets the toast's height as bottom room while it is up");
+  // A plain toast lets taps through to the buttons under it; its own buttons still work.
+  ok(/\.toast\{[^}]*pointer-events:none/.test(css),"a plain toast does not swallow taps");
+  ok(/\.toast button\{pointer-events:auto\}/.test(css),"but its own buttons take them");
+
+  // An offer with a button waits for the player, and can be dismissed by hand.
+  a.tab("city");
+  let fired=0;
+  a.w.__act=()=>fired++;
+  a.g('toast("Your city was hit.",()=>__act(),"Watch ad")');
+  ok(shown(a)&&a.g("tt")===null,"an action toast has no timer: it does not close by itself");
+  ok(!!a.$("#toast #tx"),"it has a close button");
+  a.tab("support");
+  ok(shown(a),"and a tab change does not throw the offer away");
+  a.click(a.$("#tx"));
+  ok(!shown(a)&&fired===0,"x closes it without running the action");
+  a.g('toast("Your city was hit.",()=>__act(),"Watch ad")');
+  a.click(a.$("#ta"));
+  ok(!shown(a)&&fired===1,"the action button runs it once and closes");
+  // a plain toast after an action toast is plain again
+  a.g('toast("hit",()=>__act(),"Go");toast("news")');
+  ok(!a.$("#toast").classList.contains("act")&&a.g("tt")!==null,"the next plain toast times out as usual");
+  a.w.close();
+}
+
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);
 process.exit(fails?1:0);
