@@ -5,25 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>YOUTH LEADER</title>
 <meta name="description" content="A click game for the 2026 World Tsunami Awareness Day High School Summit. Tap to cut your city's emissions or build its shield. Coins can only be spent on another city.">
-<meta name="theme-color" content="#0E2A47">
+<meta name="theme-color" content="#0F4C9C">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 
 <!-- ====================================================================
-     AFTER THE FIRST DEPLOY, EDIT THE TWO ABSOLUTE URLS BELOW.
-     A link pasted into KakaoTalk or Slack shows nothing but the bare URL
-     until these are right, and og:image will not accept a relative path.
-     Replace https://example.github.io/youth-leader/ with the real Pages
-     address in both og:url and og:image. Nothing else needs touching.
-     `npm test` checks that the two agree, not that they are correct.
+     These two URLs are absolute because og:image will not accept a
+     relative path. They are built from the repo this lives in:
+     github.com/superbathun724/un_summit -> superbathun724.github.io/un_summit/
+     If the repo is ever renamed or moved, change both. `npm test` checks
+     that they agree with each other, not that the address is reachable.
      ==================================================================== -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="YOUTH LEADER">
 <meta property="og:title" content="YOUTH LEADER — every tap cuts a tonne">
 <meta property="og:description" content="Tap to cut your city's emissions or build its shield. Coins can only be spent on another city. Built by three high school students in Ulsan for the 2026 World Tsunami Awareness Day Summit.">
-<meta property="og:url" content="https://example.github.io/youth-leader/">
-<meta property="og:image" content="https://example.github.io/youth-leader/og.png">
+<meta property="og:url" content="https://superbathun724.github.io/un_summit/">
+<meta property="og:image" content="https://superbathun724.github.io/un_summit/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="A city skyline above a sea wall, under the words YOUTH LEADER.">
@@ -36,16 +35,18 @@
 
   <div id="gate">
     <h1>Every tap cuts a tonne.</h1>
-    <p>Pick your city. Its role comes from public data, not from us: industrial cities cut emissions, coastal cities build protection, and some do both.</p>
+    <p id="gateWhy"></p>
     <select id="countrySel"></select>
+    <p class="warn" id="gateWarn" hidden></p>
     <button class="btn" id="startBtn">Play as this city</button>
+    <button class="btn keep" id="gateKeep" hidden></button>
     <div class="why">No account, no name, no location tracking. A random device ID stores your progress. Pilot: Korean cities first. Countries come next.</div>
   </div>
 
   <header>
     <div class="brand">YOUTH LEADER</div>
     <div class="hdr">
-      <div class="chip" id="chip"><span class="dot"></span><span id="chipTxt"></span></div>
+      <button class="chip" id="chip" aria-label="change city"><span class="dot"></span><span id="chipTxt"></span></button>
       <div class="coins" id="coins">0</div>
     </div>
   </header>
@@ -56,6 +57,8 @@
     <button data-tab="voice">Voice</button>
     <button data-tab="rank">Ranking</button>
   </nav>
+
+  <div id="ticker"></div>
 
   <section id="city" class="on">
     <div id="scene">
@@ -102,8 +105,6 @@
       <div class="meter" id="mCut"><small>Today's emissions left</small><b id="tons">0 t</b><div class="bar"><i id="tonsBar"></i></div><small id="streak"></small></div>
       <div class="meter" id="mDef"><small id="defLbl">Your shield</small><b id="shieldPct">0%</b><div class="bar"><i id="shieldBar"></i></div><small id="defLeft"></small><div class="bar thin"><i id="defBar"></i></div></div>
     </div>
-    <div id="ticker"></div>
-
     <div class="pad">
       <p class="note" id="cityNote"></p>
       <div id="upgrades"></div>
@@ -124,11 +125,16 @@
 
     <div class="row" id="noteCard">
       <div class="t">Seen a drill, a flood, a warning?</div>
-      <div class="d">Tell the team what your city gets right or wrong. We read it and it shapes the next version. It is never posted, and no other player can see it.</div>
+      <div class="d">Tell the team what your city gets right or wrong. It is never posted, and no other player can see it.</div>
       <textarea id="noteBox" rows="4" maxlength="300" placeholder="e.g. The drain on our street blocks every summer."></textarea>
       <div class="d">No names, no school, no phone numbers. Write about the place, not about people.</div>
-      <button class="btn coin" id="noteSend">Send what you know</button>
-      <div class="d" id="noteLog"></div>
+      <button class="btn coin" id="noteSend">Save this note</button>
+    </div>
+
+    <div class="row" id="noteVault" hidden>
+      <div class="nhead"><div class="t" id="noteLog"></div><button class="btn ad" id="noteCopy">Copy all</button></div>
+      <div id="noteList"></div>
+      <div class="d">Nothing has left this phone. These wait here until the team's form is connected — or until you copy them and send them yourself.</div>
     </div>
   </section>
 

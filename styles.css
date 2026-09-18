@@ -1,21 +1,30 @@
 :root{
-  --sky:#7FC4E8; --smog:#8A7A5A; --sea:#1F5F8B; --deep:#0E2A47;
-  --ink:#16232E; --paper:#EEF3F5; --mist:#D6E0E6; --coin:#F2B134; --alert:#E05A47; --leaf:#4E9F5C;
+  /* The three brand values come from the presentation slides, so the app and the deck read
+     as one thing in the same room: brand blue on near-white, with light-blue surfaces.
+     --sea and --smog are scene paint, not brand, and are left alone. */
+  --sky:#7FC4E8; --smog:#8A7A5A; --sea:#1F5F8B; --brand:#0F4C9C;
+  --ink:#16232E; --paper:#F8FAFC; --mist:#E4ECF5; --coin:#F2B134; --alert:#E05A47; --leaf:#4E9F5C;
+  /* Poppins if the device happens to have it, and no web font fetch to find out. This site
+     has no runtime dependency and a school phone on a bad connection should not gain one for
+     a typeface. See README if that trade is ever worth revisiting. */
+  --head:"Poppins","Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100%;overscroll-behavior:none}
-body{font-family:"Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--deep);color:var(--ink);display:flex;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body{font-family:"Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--brand);color:var(--ink);display:flex;justify-content:center;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 #app{width:100%;max-width:420px;min-height:100vh;min-height:100dvh;background:var(--paper);display:flex;flex-direction:column;position:relative;overflow:hidden;padding-bottom:env(safe-area-inset-bottom)}
 
 /* ---------- top bar ---------- */
 header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;gap:8px}
-.brand{font-weight:800;letter-spacing:-.02em;font-size:16px;white-space:nowrap}
+.brand{font-family:var(--head);font-weight:800;letter-spacing:-.02em;font-size:16px;white-space:nowrap}
 .hdr{display:flex;align-items:center;gap:6px;min-width:0}
 #chipTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Coins live in the bar, not on the city page: you spend them on the Support page,
    and you cannot decide what to send if the number is on a screen you just left. */
 .coins{background:var(--coin);color:#3d2a00;border-radius:999px;padding:5px 11px;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
-.chip{display:flex;align-items:center;gap:6px;background:var(--mist);border-radius:999px;padding:5px 10px 5px 8px;font-size:12.5px;font-weight:600;cursor:pointer}
+/* A real button now. It looked tappable and did nothing, which is worse than not looking
+   tappable at all -- it is the only place the city name appears, so it is where people press. */
+.chip{display:flex;align-items:center;gap:6px;background:var(--mist);border:0;border-radius:999px;padding:5px 10px 5px 8px;font-size:12.5px;font-weight:600;color:var(--ink);font-family:inherit;cursor:pointer}
 .chip .dot{width:9px;height:9px;border-radius:50%}
 .role-E .dot{background:var(--smog)} .role-R .dot{background:var(--sea)} .role-B .dot{background:linear-gradient(90deg,var(--smog) 50%,var(--sea) 50%)}
 
@@ -24,7 +33,10 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
    svh is the toolbar-visible height, so this does NOT resize while the toolbar hides on scroll.
    The 240px floor is not arbitrary: the SVG slices from the bottom, and below it the chimney
    tops (viewBox y=70) get cut off. Never crop the chimneys -- they are what you tap. */
-#scene{position:relative;height:300px;height:clamp(240px,40svh,300px);overflow:hidden;cursor:pointer;touch-action:manipulation;background:linear-gradient(var(--sky),#c9e7f5 70%,var(--sea) 70%,var(--sea))}
+/* touch-action:none, not manipulation. `manipulation` only turns off double-tap zoom -- a
+   drag that starts on the city still scrolls the page, and a fast tapper drags constantly.
+   `none` means no gesture on the scene ever moves the page. Everything below it still scrolls. */
+#scene{position:relative;height:300px;height:clamp(240px,40svh,300px);overflow:hidden;cursor:pointer;touch-action:none;background:linear-gradient(var(--sky),#c9e7f5 70%,var(--sea) 70%,var(--sea))}
 #scene svg{position:absolute;inset:0;width:100%;height:100%}
 #smog{position:absolute;inset:0;background:linear-gradient(var(--smog),rgba(138,122,90,.55) 60%,transparent);pointer-events:none;transition:opacity .35s}
 #scene.shake{animation:shake .5s}
@@ -76,7 +88,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 #meters{display:flex;gap:10px;padding:12px 16px 4px}
 .meter{flex:1;min-width:0;background:#fff;border-radius:14px;padding:10px 12px}
 .meter[hidden]{display:none}
-.meter.active{outline:2px solid var(--deep)}
+.meter.active{outline:2px solid var(--brand)}
 .meter b{display:block;font-size:22px;letter-spacing:-.02em}
 .meter small{color:#5b6b78;font-size:12px}
 #streak{display:block;margin-top:5px}
@@ -88,9 +100,16 @@ header{display:flex;align-items:center;justify-content:space-between;padding:12p
 .bar.thin{height:4px;margin-top:4px}
 #defBar{background:#9ec3d8}
 #defLeft{display:block;margin-top:7px;color:#5b6b78;font-size:12px}
-#ticker{margin:6px 16px 0;font-size:12.5px;color:#3c4d5a;min-height:18px}
+/* Under the tabs, outside every section: a wave lands while you are on My City, and the
+   only thing that used to say so lived on a page you were not looking at. */
+#ticker{margin:9px 16px 0;font-size:12.5px;color:#3c4d5a;line-height:1.35}
+#ticker:empty{display:none}
 #ticker.bad{color:var(--alert);font-weight:600}
 #ticker.good{color:var(--leaf);font-weight:600}
+/* A red line is easy to miss with your thumb on the city. This is not. */
+#ticker.hit{animation:hit 1.6s 2}
+@keyframes hit{0%,100%{background:transparent;padding-left:0}
+  30%{background:#FDEDEA;box-shadow:0 0 0 6px #FDEDEA;border-radius:3px;padding-left:2px}}
 
 /* ---------- tabs ---------- */
 nav{display:flex;margin:10px 16px 0;background:var(--mist);border-radius:12px;padding:3px}
@@ -110,7 +129,7 @@ section.on{display:block}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:14px;padding:12px;margin-bottom:8px}
 .row .t{font-weight:700;font-size:15px}
 .row .d{font-size:12.5px;color:#5b6b78;margin-top:2px}
-.btn{border:0;background:var(--deep);color:#fff;font-weight:700;padding:9px 13px;border-radius:10px;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn{border:0;background:var(--brand);color:#fff;font-weight:700;padding:9px 13px;border-radius:10px;font-size:14px;cursor:pointer;white-space:nowrap}
 .btn.coin{background:var(--coin);color:#3d2a00}
 .btn:disabled{opacity:.35;cursor:default}
 .rank{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:9px 12px;background:#fff;border-radius:12px;margin-bottom:6px;font-size:14px}
@@ -132,8 +151,15 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
 /* The body forbids selection so a drag on the city never highlights it. The one place a
    player types has to opt back in, or the text cannot be corrected. */
 #noteBox{width:100%;margin-top:9px;padding:10px;border:1.5px solid var(--mist);border-radius:10px;font:inherit;font-size:14px;resize:none;user-select:text;-webkit-user-select:text;color:var(--ink);background:#fff}
-#noteBox:focus{outline:2px solid var(--deep);border-color:transparent}
+#noteBox:focus{outline:2px solid var(--brand);border-color:transparent}
 #noteSend{margin-top:9px}
+#noteVault{display:block}
+#noteVault .nhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.note-i{display:flex;gap:8px;align-items:flex-start;border-top:1px solid var(--mist);padding:9px 0;font-size:13.5px;line-height:1.45}
+.note-i:last-of-type{border-bottom:1px solid var(--mist);margin-bottom:9px}
+.note-i time{color:#5b6b78;font-size:11.5px;white-space:nowrap;padding-top:2px}
+.note-i p{flex:1;word-break:break-word}
+.note-i button{border:0;background:transparent;color:#8d9aa5;font-size:17px;line-height:1;cursor:pointer;padding:0 2px}
 
 /* ---------- live disaster ---------- */
 /* Pinned to the top of Support for 3 minutes. Relief sent inside the window counts double,
@@ -146,26 +172,31 @@ p.note{font-size:12.5px;color:#5b6b78;line-height:1.5;margin:6px 2px 10px}
 .tag.SOS{background:var(--alert);color:#fff}
 
 /* ---------- overlay ---------- */
-#gate{position:absolute;inset:0;background:var(--deep);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:32px 28px;z-index:10}
-#gate h1{font-size:34px;line-height:1.05;letter-spacing:-.03em;margin-bottom:10px}
+#gate{position:absolute;inset:0;background:var(--brand);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:32px 28px;z-index:10}
+#gate h1{font-family:var(--head);font-size:34px;line-height:1.05;letter-spacing:-.03em;margin-bottom:10px}
 #gate p{color:#b9cbdc;line-height:1.5;margin-bottom:18px;font-size:15px}
 #gate select{width:100%;padding:12px;border-radius:12px;border:0;font-size:16px;margin-bottom:12px;background:#fff;color:var(--ink)}
 #gate .btn{width:100%;padding:14px;font-size:16px;background:var(--coin);color:#3d2a00}
 #gate .why{font-size:12.5px;color:#8fa6ba;margin-top:14px;line-height:1.5}
+/* Switching city throws a save away. It is said before the button, not after. */
+#gate .warn{background:#3a2420;color:#FFD9D2;border-left:3px solid var(--alert);border-radius:8px;
+  padding:11px 12px;font-size:13px;line-height:1.5;margin-bottom:12px}
+#gate .btn.keep{background:transparent;color:#b9cbdc;box-shadow:inset 0 0 0 1.5px #3d5a78;margin-top:10px}
+#gate .btn[hidden],#gate .warn[hidden]{display:none}
 .toast{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:388px;bottom:calc(18px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;z-index:9;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:in .25s}
 @keyframes in{from{transform:translate(-50%,12px);opacity:0}}
 
 /* ---------- ad (stand-in until a real rewarded-ad network is connected) ---------- */
-#ad{position:absolute;inset:0;background:var(--deep);color:#fff;display:flex;flex-direction:column;padding:16px 20px 24px;z-index:20;gap:12px}
+#ad{position:absolute;inset:0;background:var(--brand);color:#fff;display:flex;flex-direction:column;padding:16px 20px 24px;z-index:20;gap:12px}
 #ad[hidden]{display:none}
 .adtop{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#b9cbdc}
 .adtag{background:var(--coin);color:#3d2a00;font-weight:800;border-radius:6px;padding:2px 7px}
 .adbox{flex:1;border:2px dashed #3d5a78;border-radius:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px;gap:8px}
-.adbox b{font-size:28px;letter-spacing:-.02em}
+.adbox b{font-family:var(--head);font-size:28px;letter-spacing:-.02em}
 .adbox span{color:#8fa6ba;font-size:13.5px;line-height:1.5}
 #adFor{font-size:14px;line-height:1.45;color:#dbe9f1}
 #adDone{padding:14px;font-size:16px}
 #adSkip{background:transparent;border:0;color:#8fa6ba;font-size:13px;padding:6px;cursor:pointer}
 .bg{display:flex;flex-direction:column;gap:5px;align-items:stretch}
-.btn.ad{background:#fff;color:var(--deep);box-shadow:inset 0 0 0 1.5px var(--deep);padding:6px 10px;font-size:12.5px}
+.btn.ad{background:#fff;color:var(--brand);box-shadow:inset 0 0 0 1.5px var(--brand);padding:6px 10px;font-size:12.5px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

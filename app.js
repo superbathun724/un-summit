@@ -1,4 +1,12 @@
 /* ---------- data (sample; production pulls from a server) ---------- */
+// Are the roles and numbers below taken from published statistics yet? They are not.
+// While this is false the first screen must NOT tell players they came from public data --
+// it said exactly that, to everyone, from the first build. At a summit where the whole
+// argument is "the data says who emits and who drowns", being asked "which data?" and having
+// no answer costs more than any feature here is worth.
+// Flip this in the same commit that replaces the numbers, and fill in the year column in
+// README. A test checks the claim and the flag agree, so they cannot drift apart again.
+const DATA_SOURCED=false;
 // role: E = high-emission, R = disaster-risk, B = both. base = starting daily tonnes (relative scale)
 // ---- PILOT MODE: Korean cities. Switch REGIONS to COUNTRIES_GLOBAL when going global (see HANDOVER.md) ----
 const REGIONS_KOREA = [
@@ -88,6 +96,12 @@ const FACTS=[
 /* ---------- state ---------- */
 const DAY_CAP=600;                // tonnes per day per player (anti-bot, keeps it a daily habit)
 const DEF_CAP=600;                // defence points per day, same ceiling as tonnes
+// A city that does both jobs used to get two full budgets -- 600 tonnes AND 600 defence --
+// so Ulsan tapped 1200 times a day and earned twice the coins of Sokcho for the same effort,
+// and could send twice the relief. Each side gets half instead. The total is 600 taps either
+// way, and a finished day is still a finished day: both halves full is duty 1.0, still 70.
+function capCut(){const k=me(),c=Math.min(DAY_CAP,k.base);return k.role==="B"?Math.round(c/2):c}
+function capDef(){return me().role==="B"?DEF_CAP/2:DEF_CAP}
 const DEF_PER_PCT=20;             // 20 points = 1% shield, so a full day of tapping alone reaches 30%.
 const SAFE=50;                    // a shield at or above this holds a wave
 // The line the game is an argument about. Your own hands and your own coins stop at SELF_MAX;
@@ -162,8 +176,8 @@ function emgRow(e){
 // section 4's "Ulsan must not be alone on the board".
 const DUTY=70, RELIEF=30, RELIEF_FULL=200;
 function dayScore(){
-  const k=me(),cap=Math.min(DAY_CAP,k.base);
-  const c=cap>0?Math.min(1,(cap-S.tons)/cap):0, d=Math.min(1,S.def/DEF_CAP);
+  const k=me(),cap=capCut();
+  const c=cap>0?Math.min(1,(cap-S.tons)/cap):0, d=Math.min(1,S.def/capDef());
   const done=k.role==="E"?c:k.role==="R"?d:(c+d)/2;
   return DUTY*done+RELIEF*Math.min(1,(S.gaveToday||0)/RELIEF_FULL);
 }
@@ -181,6 +195,9 @@ function buildWorld(){
 
 /* ---------- init ---------- */
 const $=s=>document.querySelector(s);
+$("#gateWhy").textContent=DATA_SOURCED
+  ?"Pick your city. Its role comes from public data, not from us: industrial cities cut emissions, coastal cities build protection, and some do both."
+  :"Pick your city. Industrial cities cut emissions, coastal cities build protection, and some do both. These roles are our own first estimate — we have not replaced them with published figures yet.";
 const sel=$("#countrySel");
 COUNTRIES.forEach(k=>{const o=document.createElement("option");o.value=k.c;o.textContent=`${k.n} — ${ROLE_LABEL[k.role]}`;sel.appendChild(o)});
 (function guessCountry(){
@@ -192,12 +209,64 @@ COUNTRIES.forEach(k=>{const o=document.createElement("option");o.value=k.c;o.tex
 const saved=store.get();
 // A save can name a city this build does not have (older version, or global mode). Ignore it, never crash.
 const savedCity=saved&&COUNTRIES.find(x=>x.c===saved.c);
-if(savedCity){sel.value=saved.c;$("#startBtn").textContent="Continue as "+savedCity.n}
+if(savedCity)sel.value=saved.c;
+// A blank state to fall back to when a player starts over as another city. The literal above
+// gets mutated from the first tap onward, so the shape is kept before anything touches it.
+const BLANK=JSON.stringify(S);
+let started=false;
+
+// The chip is the only place the city name appears, so it is where people press to change it.
+// It reopens the gate rather than inventing a second picker.
+$("#chip").onclick=()=>{if(!started)return;sel.value=S.c;gateSync();$("#gate").style.display=""};
+sel.onchange=gateSync;
+// Says what the button is about to do, before it is pressed. Switching city is not undoable:
+// this phone holds one save, and the game is one city per device on purpose.
+function gateSync(){
+  const c=sel.value,x=COUNTRIES.find(y=>y.c===c);
+  const cur=started?S.c:(savedCity?saved.c:null);
+  const leaving=cur&&cur!==c, mine=COUNTRIES.find(y=>y.c===cur);
+  $("#gateKeep").hidden=!started;
+  if(started)$("#gateKeep").textContent="Keep playing as "+me().n;
+  $("#gateWarn").hidden=!leaving;
+  if(leaving){
+    const st=started?S:saved, bits=[];
+    if(st.streak>1)bits.push(`a ${st.streak}-day streak`);
+    const up=Object.values(st.upg||{}).reduce((a,b)=>a+b,0);
+    if(up)bits.push(`${up} upgrade${up>1?"s":""}`);
+    if((st.shield||{}).self)bits.push(`a ${st.shield.self}% shield`);
+    if(st.notes&&st.notes.length)bits.push(`${st.notes.length} saved note${st.notes.length>1?"s":""}`);
+    $("#gateWarn").textContent=`Starting over as ${x.n} clears this phone. ${mine?mine.n:"Your city"} loses `
+      +(bits.length?bits.join(", ")+" — none of it comes back.":"everything saved here.");
+  }
+  $("#startBtn").textContent=leaving?`Start over as ${x.n}`
+    :(started?`Keep playing as ${x.n}`
+    :(savedCity&&saved.c===c?"Continue as "+x.n:"Play as this city"));
+}
+$("#gateKeep").onclick=()=>{$("#gate").style.display="none";sel.value=S.c;gateSync()};
+gateSync();
 $("#startBtn").onclick=()=>{
   const c=sel.value;
+  // Reopened mid-game. Same city: just close. Different city: wipe and rebuild, but never
+  // run the start-up again -- a second set of timers would double the clock.
+  if(started){
+    $("#gate").style.display="none";
+    if(c===S.c){gateSync();return}
+    S=Object.assign(JSON.parse(BLANK),{uid:uid(),c});
+    EMG=[];worldStamp++;listSig="";
+    rollDay();buildWorld();scenery();lastTick=Date.now();
+    render();ticker("");flush();gateSync();
+    toast("Starting over as "+me().n+".");
+    return;
+  }
+  started=true;
   if(savedCity&&saved.c===c){S=Object.assign({},S,saved,{upg:saved.upg||{},shield:saved.shield||{},notes:saved.notes||[]})}else{S.uid=uid();S.c=c}
   const k=me();
   rollDay();
+  // A save can carry more of today's budget than today allows: written by an older build, or
+  // by this city before a "both" city's budget was halved. Left alone, the meter bar computes
+  // a negative width and the sky never clears.
+  S.tons=Math.min(S.tons,capCut());
+  S.def=Math.min(S.def,capDef());
   // S.at is the last moment this save was written. Everything since then is away time.
   // rollDay() runs first on purpose: a player gone for three days comes back to one fresh
   // day's budget, never three, and the away payout is drawn from that day.
@@ -209,6 +278,7 @@ $("#startBtn").onclick=()=>{
   lastTick=Date.now();
   render();if(back)ticker(back,"good");fact("Your role: "+ROLE_LABEL[k.role]+". "+(k.role==="E"?"Cut tonnes, then send coins where the waves land.":k.role==="R"?"Build your shield with coins, yours or a stranger's.":"You cut and you build. Most countries do."));
   setInterval(tick,1000);setInterval(disaster,45000);
+  gateSync();
 };
 function me(){return COUNTRIES.find(x=>x.c===S.c)}
 // The role decides what a tap means. Only a "both" city gets to choose.
@@ -227,7 +297,7 @@ function shieldUp(pct,others){
 
 // Defence points buy shield percent. Returns how much today's budget actually accepted.
 function addDef(n){
-  n=Math.min(n,DEF_CAP-S.def);
+  n=Math.min(n,capDef()-S.def);
   if(n<=0)return 0;
   S.def+=n;S.defTotal+=n;S.defAcc+=n;S.coins+=n;
   const up=Math.floor(S.defAcc/DEF_PER_PCT);
@@ -239,7 +309,7 @@ function rollDay(){
   if(S.day===today())return false;
   const wasYesterday=S.day&&(new Date(today())-new Date(S.day))/864e5===1;
   S.streak=wasYesterday?S.streak+1:1;
-  S.day=today();S.tons=Math.min(DAY_CAP,me().base);S.taps=0;S.def=0;S.ads=0;S.gaveToday=0;S.techToday=0;
+  S.day=today();S.tons=capCut();S.taps=0;S.def=0;S.ads=0;S.gaveToday=0;S.techToday=0;
   // The sea keeps rising, so yesterday's wall is not today's wall. Nothing else decays --
   // tonnes cut and coins given are history and history does not un-happen.
   if(S.shield.self)S.shield.self=Math.max(0,S.shield.self-SHIELD_DECAY);
@@ -264,9 +334,9 @@ function awayPay(sec){
   let cr=0,dr=0;
   UP_CUT.forEach(u=>cr+=(S.upg[u.id]||0)*u.rate);
   UP_DEF.forEach(u=>dr+=(S.upg[u.id]||0)*u.rate);
-  const cap=Math.min(DAY_CAP,me().base),sh0=S.shield.self||0;
+  const cap=capCut(),sh0=S.shield.self||0;
   const cut=Math.max(0,Math.min(cr*sec,S.tons-cap*(1-AWAY_SHARE)));
-  const def=Math.max(0,Math.min(dr*sec,DEF_CAP*AWAY_SHARE-S.def));
+  const def=Math.max(0,Math.min(dr*sec,capDef()*AWAY_SHARE-S.def));
   if(cut>0){S.tons-=cut;S.cut+=cut;S.coins+=cut}
   const got=def>0?addDef(def):0;
   if(cut<=0&&got<=0)return "";
@@ -278,6 +348,7 @@ function awayPay(sec){
 
 /* ---------- core loop ---------- */
 $("#scene").addEventListener("pointerdown",e=>{
+  e.preventDefault();
   const r=$("#scene").getBoundingClientRect();
   tap(e.clientX-r.left,e.clientY-r.top);
 });
@@ -295,7 +366,7 @@ document.addEventListener("keydown",e=>{
 });
 function tap(x,y){
   if(mode()==="def"){
-    if(S.def>=DEF_CAP){toast("Today's defence work is done. Come back tomorrow, or send coins.");return}
+    if(S.def>=capDef()){toast("Today's defence work is done. Come back tomorrow, or send coins.");return}
     const was=S.shield.self||0;
     addDef(1);S.taps++;
     puff(x,y,"+1","def");
@@ -360,7 +431,7 @@ function disaster(){
   if(k.c===S.c){$("#wave").classList.add("on");setTimeout(()=>$("#wave").classList.remove("on"),2000)}
   if(sh>=SAFE){ticker(`Wave hit ${k.n}. Shield held. ${sh}% funded.`,"good")}
   else{
-    ticker(`Wave hit ${k.n}. Shield only ${sh}%. Relief counts double for 3 minutes — see Support.`,"bad");
+    ticker(`Wave hit ${k.n}. Shield only ${sh}%. Relief counts double for 3 minutes — see Support.`,"bad",true);
     emgAdd(k.c);
     if(k.c===S.c){const lost=S.coins-Math.floor(S.coins*0.8);S.coins-=lost;scene.classList.add("shake");setTimeout(()=>scene.classList.remove("shake"),600);
       // The wave is not the player's timing, so this ad skips the one-a-minute gap. The daily cap still holds.
@@ -478,7 +549,7 @@ function render(){renderTop();renderLists(true)}
 // signature says the set of rows changed; otherwise syncRows() writes the new values in.
 function refresh(){renderTop();renderLists()}
 function renderTop(){
-  const k=me(),m=mode(),cap=Math.min(DAY_CAP,k.base),sh=S.shield.self||0;
+  const k=me(),m=mode(),cap=capCut(),sh=S.shield.self||0;
   $("#chip").className="chip role-"+k.role;$("#chipTxt").textContent=k.n;
   $("#modeSw").hidden=k.role!=="B";
   document.querySelectorAll("#modeSw button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
@@ -507,9 +578,9 @@ function renderTop(){
   document.querySelectorAll(".stack").forEach((s,i)=>s.style.opacity=(S.upg.wind&&i<3)?0:1);
   // The day's defence budget, which had no place on screen at all: a defence player could
   // only find out it existed by hitting it.
-  const dleft=Math.max(0,DEF_CAP-S.def);
+  const dleft=Math.max(0,capDef()-S.def);
   $("#defLeft").textContent=dleft>0?`Today's defence: ${Math.round(dleft)} left`:"Today's defence: done";
-  $("#defBar").style.width=(100*S.def/DEF_CAP)+"%";
+  $("#defBar").style.width=(100*S.def/capDef())+"%";
   // 0.35 and a floor of 6, so an empty wall is a footing you can see blocks land on rather
   // than a 4px hairline under a sign telling you to raise it.
   // Anchored at 248, out in the water. The old wall sat at 232 and grew up into the dark
@@ -528,7 +599,7 @@ function renderTop(){
   $("#safeTxt").textContent=`${SAFE}% holds a wave`;
   $("#shieldWall").setAttribute("opacity",(m==="def"||held)?1:0);
   $("#hint").textContent=m==="def"
-    ?(S.def>=DEF_CAP?"Today's work is done. Now go to Support.":"Tap the shore to raise the seawall")
+    ?(S.def>=capDef()?"Today's work is done. Now go to Support.":"Tap the shore to raise the seawall")
     :(S.tons<=0?"Clean air. Now go to Support.":"Tap the city to shut a chimney");
   $("#ledger").textContent="$"+S.ledger.toFixed(2);
 }
@@ -648,8 +719,33 @@ function renderVoice(){
   $("#pollNote").textContent=voted
     ?`${tot} answers so far. The tally is a stand-in until the server is connected; your own answer is saved on this phone.`
     :"Pick one. Nobody is asked to be right — this is what the city itself would fund first.";
+  // The notes were write-only: you typed one, it vanished, and there was no way to tell
+  // whether anything had happened to it. They live on this phone, so show them.
   const n=S.notes.length;
-  $("#noteLog").textContent=n?`${n} note${n>1?"s":""} saved on this phone, waiting for the team.`:"";
+  $("#noteVault").hidden=!n;
+  $("#noteLog").textContent=n===1?"1 note on this phone":`${n} notes on this phone`;
+  $("#noteList").innerHTML=S.notes.map((x,i)=>
+    `<div class="note-i"><time>${esc(x.d)}</time><p>${esc(x.t)}</p><button onclick="delNote(${i})" aria-label="delete">×</button></div>`).join("");
+}
+// Their own text goes back into the page as HTML. It is their own phone and their own
+// sentence, but a stray < still breaks the list, so it is escaped like anything else.
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+function delNote(i){S.notes.splice(i,1);save();renderVoice()}
+// Until a form exists this is the only way a note actually reaches the team: the player
+// copies it and pastes it into whatever the class already uses. Good enough for a two-week
+// school test, and it needs no server and no account.
+function copyNotes(){
+  const t=S.notes.map(x=>`${x.d} ${x.c}: ${x.t}`).join("\n");
+  if(!t)return;
+  const ok=()=>toast("Copied. Paste it wherever the class is collecting these."),
+        hand=()=>{
+          const a=document.createElement("textarea");
+          a.value=t;a.style.cssText="position:fixed;top:0;opacity:0";
+          document.body.appendChild(a);a.select();
+          let done=false;try{done=document.execCommand("copy")}catch(e){}
+          a.remove();done?ok():toast("Copy did not work on this browser. Read them out instead.");
+        };
+  try{navigator.clipboard.writeText(t).then(ok,hand)}catch(e){hand()}
 }
 function vote(i){S.vote=i;save();renderVoice();voiceDot();
   if(i!=null)toast("Answer saved. It is counted for your city, never shown with anything about you.")}
@@ -659,10 +755,11 @@ function sendNote(){
   if(t.length<4){toast("Write a line first.");return}
   S.notes.push({d:today(),c:S.c,t:t.slice(0,300)});
   b.value="";save();renderVoice();
-  toast("Saved on this phone. It goes to the team once the form is connected. It is not posted anywhere.");
+  toast("Saved on this phone. Nothing has been sent yet — it waits below until the team collects it.");
 }
 function voiceDot(){const b=$('nav button[data-tab="voice"]');if(b)b.classList.toggle("new",!!S.c&&S.vote==null)}
 $("#noteSend").onclick=sendNote;
+$("#noteCopy").onclick=copyNotes;
 
 /* ---------- rewarded ads ---------- */
 let AD=null;
@@ -753,7 +850,7 @@ function pop(x,y,label,kind){const q=document.createElement("div");q.className="
 let tt;function toast(msg,action,label){const t=$("#toast");t.style.display="block";t.innerHTML=msg+(action?` <button class="btn coin" style="margin-top:8px;display:block" id="ta">${label}</button>`:"");
   if(action)$("#ta").onclick=()=>{action();t.style.display="none"};clearTimeout(tt);tt=setTimeout(()=>t.style.display="none",action?12000:4500)}
 function fact(m){toast(m)}
-function ticker(m,cls){const t=$("#ticker");t.textContent=m;t.className=cls||""}
+function ticker(m,cls,flash){const t=$("#ticker");t.textContent=m;t.className=(cls||"")+(flash?" hit":"")}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab));if(S.c)renderLists(true)});
 document.querySelectorAll("#modeSw button").forEach(b=>b.onclick=()=>{
   if(!S.c||mode()===b.dataset.mode)return;

@@ -157,9 +157,13 @@ console.log("--- task 3: My City is one page ---");
   const labels=a.all("nav button").map(b=>b.textContent);
   ok(labels[0]==="My City","first tab renamed: "+labels.join(" | "));
   ok(a.$("#city")&&!a.$("#cut"),"section renamed to #city");
-  // the scene, the switch, the meters, the ticker and the upgrades all live on that one page
-  ["#scene","#modeSw","#meters","#ticker","#upgrades"].forEach(sel=>
+  // the scene, the switch, the meters and the upgrades all live on that one page
+  ["#scene","#modeSw","#meters","#upgrades"].forEach(sel=>
     ok(a.$("#city").contains(a.$(sel)),sel+" is on the My City page"));
+  // the ticker deliberately is not: a wave lands while you are clicking here, and the line
+  // that says so has to be readable from Support and Ranking too
+  ok(!a.$("#city").contains(a.$("#ticker")),"the status line is not owned by My City");
+  ok(!a.$("#ticker").closest("section"),"it sits outside every page");
   ok(a.$("#city").classList.contains("on"),"My City is the page you land on");
 
   // leaving the page takes the scene with it, which is the point: the lists get the screen
@@ -447,9 +451,12 @@ console.log("--- task 6: upgrades run while the tab is closed ---");
   ok(/\+15% shield/.test(w.document.querySelector("#ticker").textContent),"report: "+w.document.querySelector("#ticker").textContent);
   w.close();
 
-  // A city that does both gets both ladders paid.
+  // A city that does both gets both ladders paid -- out of half a budget each, so half of
+  // half. The fixture also carries yesterday's 600 tonnes, which today's cap must clamp.
   w=reopen({c:"ULS",upg:{bus:1,sandbag:1}},60);
-  ok(w.eval("S.cut")===300&&w.eval("S.def")===300,"both ladders ran, "+w.eval("S.cut")+" t and "+w.eval("S.def")+" def");
+  ok(w.eval("capCut()")===300&&w.eval("capDef()")===300,"a both-city's day is halved on each side");
+  ok(w.eval("S.cut")===150&&w.eval("S.def")===150,"both ladders ran, "+w.eval("S.cut")+" t and "+w.eval("S.def")+" def");
+  ok(w.eval("S.tons")>=0,"and the clamped budget never goes negative, got "+w.eval("S.tons"));
   w.close();
 
   // A reload is not a trip. Under a minute says nothing.
@@ -826,6 +833,146 @@ console.log("--- task 11: the button under your finger is never replaced ---");
   ok(/%/.test(a.$('#supportList [data-emgrow="BUS"] [data-v]').textContent),
      "and its shield reads live: "+a.$('#supportList [data-emgrow="BUS"] [data-v]').textContent);
   a.w.close();
+}
+
+console.log("--- task 12: reported from a phone ---");
+{
+  // 1. A drag that starts on the city must never scroll the page. `manipulation` only turns
+  //    off double-tap zoom; a fast tapper drags constantly and the page crawled away.
+  let a=boot("SOK");
+  const css=[...a.d.querySelectorAll("style")].map(e=>e.textContent).join("");
+  ok(/#scene\{[^}]*touch-action:none/.test(css),"the scene takes the gesture, so nothing scrolls under a thumb");
+  const ev=new a.w.MouseEvent("pointerdown",{bubbles:true,cancelable:true,clientX:100,clientY:100});
+  a.$("#scene").dispatchEvent(ev);
+  ok(ev.defaultPrevented,"and the handler cancels the gesture as well");
+  a.w.close();
+
+  // 2. A wave lands while you are clicking on My City. The line that says so used to live
+  //    inside that page only, so from Support or Ranking there was no sign at all.
+  a=boot("SOK");
+  ok(!a.$("#ticker").closest("section"),"the status line belongs to no page");
+  a.g("const _r=COUNTRIES.filter(k=>k.role!=='E');Math.random=()=>_r.findIndex(k=>k.c==='BUS')/_r.length+0.001");
+  a.g("WORLD.BUS.shield=10;disaster()");
+  ok(/Wave hit Busan/.test(a.$("#ticker").textContent),"the wave is announced: "+a.$("#ticker").textContent);
+  ok(a.$("#ticker").classList.contains("bad"),"in red");
+  ok(a.$("#ticker").classList.contains("hit"),"and it flashes, because red text alone is missed");
+  ["support","voice","rank"].forEach(t=>{a.tab(t);
+    ok(/Wave hit Busan/.test(a.$("#ticker").textContent),"still readable from "+t)});
+  ok(!!a.$("#supportList .row.emg"),"and the red card is where the relief buttons are");
+  ok(a.$('nav button[data-tab="support"]').classList.contains("alert"),"with the dot on the tab");
+  // a calm line clears the flash again
+  a.g('ticker("all quiet","good")');
+  ok(!a.$("#ticker").classList.contains("hit"),"the flash does not stick");
+  a.w.close();
+
+  // 3. A saved note was invisible after saving, so it looked like it had gone somewhere.
+  a=boot("MOK");a.tab("voice");
+  ok(a.$("#noteVault").hidden===true,"no vault before there is anything in it");
+  a.$("#noteBox").value="The drain on our street blocks every summer.";
+  a.click(a.$("#noteSend"));
+  ok(a.$("#noteVault").hidden===false,"the note is shown back to you");
+  ok(a.all("#noteList .note-i").length===1,"one entry, got "+a.all("#noteList .note-i").length);
+  ok(a.$("#noteList p").textContent.includes("drain"),"with the sentence in it");
+  ok(a.$("#noteList time").textContent===a.g("today()"),"and the day it was written");
+  ok(/1 note on this phone/.test(a.$("#noteLog").textContent),"counted: "+a.$("#noteLog").textContent);
+  ok(/Nothing has left this phone/.test(a.$("#noteVault").textContent),"and it says plainly that nothing was sent");
+  ok(/Nothing has been sent yet/.test(a.$("#toast").textContent),"the confirmation says so too: "+a.$("#toast").textContent);
+
+  // it is still not readable by anyone else, which is the whole design
+  a.tab("support");ok(!a.$("#support").textContent.includes("drain"),"still never reaches Support");
+  a.tab("rank");ok(!a.$("#rank").textContent.includes("drain"),"still never reaches Ranking");
+  a.tab("voice");
+
+  // their own sentence goes back in as HTML, so it has to be escaped
+  a.$("#noteBox").value='the gate <script>x</script> is rusted & stuck';
+  a.click(a.$("#noteSend"));
+  ok(a.all("#noteList .note-i").length===2,"second note saved");
+  ok(a.all("#noteList p")[1].textContent==="the gate <script>x</script> is rusted & stuck",
+     "angle brackets survive as text: "+a.all("#noteList p")[1].textContent);
+  ok(a.$("#noteList").querySelectorAll("script").length===0,"and never as a tag");
+
+  // you can take one back
+  a.g("delNote(0)");
+  ok(a.g("S.notes.length")===1&&!a.$("#noteList").textContent.includes("drain"),"a note can be deleted");
+  a.g("flush()");
+  ok(JSON.parse(a.w.localStorage.getItem("yl")).notes.length===1,"and the deletion is saved");
+
+  // until a form exists, copying is the only way it actually reaches the team
+  let copied="";
+  a.w.navigator.clipboard={writeText:t=>{copied=t;return Promise.resolve()}};
+  a.click(a.$("#noteCopy"));
+  ok(copied.includes("rusted")&&copied.includes("MOK")&&copied.includes(a.g("today()")),
+     "copy carries the note, the city and the date: "+copied);
+  a.w.close();
+}
+
+console.log("--- task 13: changing city, and starting once ---");
+{
+  // The chip was the only place the city name appeared, it had cursor:pointer, and it did
+  // nothing at all. There was no way to change city after starting.
+  let a=boot("ULS");
+  ok(a.$("#chip").tagName==="BUTTON","the chip is a real button");
+  ok(a.$("#gate").style.display==="none","the gate is closed while playing");
+  a.click(a.$("#chip"));
+  ok(a.$("#gate").style.display!=="none","and the chip reopens it");
+  ok(a.$("#countrySel").value==="ULS","with your own city selected");
+  ok(a.$("#gateWarn").hidden===true,"nothing to warn about yet");
+  ok(a.$("#gateKeep").hidden===false&&/Keep playing as Ulsan/.test(a.$("#gateKeep").textContent),
+     "and a way back out: "+a.$("#gateKeep").textContent);
+  a.click(a.$("#gateKeep"));
+  ok(a.$("#gate").style.display==="none","which closes it again");
+  ok(a.g("S.c")==="ULS","and changes nothing");
+
+  // Picking another city used to wipe the save silently: new uid, no streak, no upgrades.
+  a.g("S.streak=6;S.upg={bus:2,solar:1};S.shield.self=35;S.notes=[{d:'x',c:'ULS',t:'y'}]");
+  a.click(a.$("#chip"));
+  a.$("#countrySel").value="SOK";
+  a.$("#countrySel").dispatchEvent(new a.w.Event("change"));
+  ok(a.$("#gateWarn").hidden===false,"choosing another city warns first");
+  const warn=a.$("#gateWarn").textContent;
+  ok(/Ulsan loses/.test(warn),"it names the city you are leaving: "+warn);
+  ["6-day streak","3 upgrade","35% shield","1 saved note"].forEach(bit=>
+    ok(warn.includes(bit),"and what goes with it: "+bit));
+  ok(/Start over as Sokcho/.test(a.$("#startBtn").textContent),"the button says what it does: "+a.$("#startBtn").textContent);
+
+  // backing out at that point must leave everything alone
+  a.click(a.$("#gateKeep"));
+  ok(a.g("S.c")==="ULS"&&a.g("S.streak")===6&&a.g("S.shield.self")===35,"backing out keeps the save");
+  ok(a.$("#gateWarn").hidden===true,"and clears the warning");
+
+  // going through with it really does start over
+  const uid0=a.g("S.uid");
+  a.click(a.$("#chip"));
+  a.$("#countrySel").value="SOK";
+  a.$("#countrySel").dispatchEvent(new a.w.Event("change"));
+  a.click(a.$("#startBtn"));
+  ok(a.$("#gate").style.display==="none","the gate closes");
+  ok(a.g("S.c")==="SOK","the city changed");
+  ok(a.g("S.uid")!==uid0,"a new device id");
+  ok(a.g("S.streak")===1&&a.g("JSON.stringify(S.upg)")==="{}"&&!a.g("S.shield.self")&&a.g("S.notes.length")===0,
+     "and nothing carried over");
+  ok(a.g("S.tons")===a.g("capCut()"),"a full fresh day, got "+a.g("S.tons"));
+  ok(a.$("#chipTxt").textContent==="Sokcho","the bar shows the new city");
+  ok(a.g("mode()")==="def","and the new city's role is in force");
+  ok(a.$("#upgrades .t")&&/Fishing port drainage/.test(a.$("#upgrades").textContent),"with its own ladder");
+  a.g("flush()");
+  ok(JSON.parse(a.w.localStorage.getItem("yl")).c==="SOK","the save on this phone is the new city");
+  a.w.close();
+
+  // Starting twice must not run the start-up twice. Two sets of timers is a double-speed game.
+  const dom=new JSDOM(html,{runScripts:"dangerously",url:"http://localhost/",pretendToBeVisual:true,
+    beforeParse(w){w.Element.prototype.animate=()=>({cancel(){}});
+      w.__n=0;const si=w.setInterval;w.setInterval=(f,ms)=>{w.__n++;return si(f,ms)}}});
+  const w=dom.window,d=w.document;
+  d.querySelector("#countrySel").value="SEO";
+  const hit=()=>d.querySelector("#startBtn").dispatchEvent(new w.MouseEvent("click",{bubbles:true}));
+  hit();
+  const n1=w.eval("__n"),uid1=w.eval("S.uid");
+  hit();hit();hit();
+  ok(w.eval("__n")===n1,"three more presses start no new timers ("+n1+" then "+w.eval("__n")+")");
+  ok(w.eval("S.uid")===uid1,"and do not reset the player");
+  ok(n1===2,"exactly the tick and the wave timer: "+n1);
+  w.close();
 }
 
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);

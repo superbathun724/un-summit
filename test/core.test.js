@@ -130,7 +130,12 @@ console.log("--- the link itself ---");
   const d2=new JSDOM(html).window.document;
   const meta=(sel,at)=>{const e=d2.querySelector(sel);return e?e.getAttribute(at||"content"):null};
   ok((meta('meta[name="description"]')||"").length>60,"a real page description is set");
-  ok(meta('meta[name="theme-color"]')==="#0E2A47","the phone browser bar matches the app");
+  // The brand blue from the slides, so the phone's browser bar, the splash and the deck agree.
+  const brand=(read("styles.css").match(/--brand:\s*(#[0-9A-Fa-f]{6})/)||[])[1];
+  ok(brand==="#0F4C9C","the brand colour is the one from the presentation, got "+brand);
+  ok(meta('meta[name="theme-color"]').toUpperCase()===brand,"the phone browser bar matches it");
+  ok(/--paper:\s*#F8FAFC/i.test(read("styles.css")),"and the page sits on the near-white from the slides");
+  ok(/--mist:\s*#E4ECF5/i.test(read("styles.css")),"with the light-blue surfaces");
   ok(meta('link[rel="icon"]',"href")==="icon.svg","an icon is declared");
   ok(meta('link[rel="apple-touch-icon"]',"href")==="icon-180.png","and one iOS can use");
   ok(meta('link[rel="manifest"]',"href")==="manifest.webmanifest","the manifest is linked");
@@ -155,8 +160,34 @@ console.log("--- the link itself ---");
   ok(mf.start_url==="./"&&mf.scope==="./","the manifest uses relative paths, so any repo name works");
   ok(mf.display==="standalone","added to a home screen it opens without browser chrome");
   ok(mf.theme_color===meta('meta[name="theme-color"]'),"and its theme colour agrees with the page");
+  ok(mf.background_color===mf.theme_color,"and the splash does not flash a different colour");
   ok(mf.icons.some(i=>i.purpose==="maskable"),"one icon is maskable for Android");
   mf.icons.forEach(i=>ok(fs.existsSync(path.join(dir,i.src)),"manifest icon exists: "+i.src));
+}
+
+console.log("--- what the app claims about its own numbers ---");
+{
+  // The gate told every player the city roles came from public data. They did not, and a
+  // summit judge asking "which data?" is the cheapest question in the room to lose on.
+  // The claim is now tied to a flag, and this checks the two cannot drift apart.
+  const app=read("app.js"),rm=read("README.md");
+  const m=/const DATA_SOURCED=(true|false);/.exec(app);
+  ok(!!m,"the build says whether its numbers are sourced");
+  const sourced=m[1]==="true";
+  const d3=new JSDOM(html,{runScripts:"dangerously",url:"http://localhost/",pretendToBeVisual:true,
+    beforeParse(w){w.Element.prototype.animate=()=>({cancel(){}})}}).window.document;
+  const why=d3.querySelector("#gateWhy").textContent;
+  ok(why.length>80,"the gate explains the roles: "+why.slice(0,50)+"...");
+  if(sourced){
+    ok(/public data/.test(why),"a sourced build may say so");
+    // README carries a source table with a year per field; an em dash means it is still blank
+    const tbl=(rm.match(/\| *`?role[\s\S]*?\n\n/)||[""])[0];
+    ok(!/\|\s*—\s*\|/.test(tbl),"and every source year is filled in, not left as a dash");
+  }else{
+    ok(!/public data/.test(why),"an unsourced build must not claim public data: "+why);
+    ok(/not replaced them with published figures/.test(why),"it says plainly what they are");
+    ok(/placeholder/i.test(rm),"and README still calls the data a placeholder");
+  }
 }
 
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);

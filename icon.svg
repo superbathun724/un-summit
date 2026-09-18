@@ -3,7 +3,7 @@
        Readable at 16px, so it is three shapes and nothing else: the sky, the sun the smog
        is cleared off, and the water it all comes down to. Content sits inside the middle
        80% so Android can mask it into a circle without cropping the sun. -->
-  <rect width="512" height="512" rx="110" fill="#0E2A47"/>
+  <rect width="512" height="512" rx="110" fill="#0F4C9C"/>
   <circle cx="256" cy="186" r="82" fill="#F2B134"/>
   <path d="M0 322c64-38 128-38 192 0s128 38 192 0 64-26 128 0v190H0Z" fill="#1F5F8B"/>
   <path d="M0 394c64-38 128-38 192 0s128 38 192 0 64-26 128 0v118H0Z" fill="#3E86B8"/>
