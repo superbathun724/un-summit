@@ -185,11 +185,24 @@ function emgRow(e){
 // would put Seoul on top on day one and every small city would quit, which is the opposite of
 // section 4's "Ulsan must not be alone on the board".
 const DUTY=70, RELIEF=30, RELIEF_FULL=200;
-function dayScore(){
+// How much of your own city's day is done, 0..1. Split out so Ranking can show it as a bar.
+function dutyDone(){
   const k=me(),cap=capCut();
   const c=cap>0?Math.min(1,(cap-S.tons)/cap):0, d=Math.min(1,S.def/capDef());
-  const done=k.role==="E"?c:k.role==="R"?d:(c+d)/2;
-  return DUTY*done+RELIEF*Math.min(1,(S.gaveToday||0)/RELIEF_FULL);
+  return k.role==="E"?c:k.role==="R"?d:(c+d)/2;
+}
+function dayScore(){
+  return DUTY*dutyDone()+RELIEF*Math.min(1,(S.gaveToday||0)/RELIEF_FULL);
+}
+// Twelfth of twelve after sixty taps reads as "I did it wrong". These two bars say what the
+// taps were worth: a slice of the 70, and the 30 that only sending can earn. Written in place
+// on every render, so they move with the tap and the send that moved them.
+function rankProg(){
+  const du=dutyDone(),re=Math.min(RELIEF_FULL,S.gaveToday||0);
+  $("#dutyTxt").textContent=`Today's duty ${Math.floor(du*100)}% · full duty = ${DUTY} points`;
+  $("#dutyBar").style.width=(du*100)+"%";
+  $("#reliefTxt").textContent=`Relief sent ${re} / ${RELIEF_FULL} coins · +${RELIEF} points`;
+  $("#reliefBar").style.width=(100*re/RELIEF_FULL)+"%";
 }
 
 /* ---------- simulated world (seeded by date so it looks alive and consistent) ---------- */
@@ -648,6 +661,7 @@ function renderTop(){
     ?(S.def>=capDef()?"Today's work is done. Now go to Support.":"Tap the shore to raise the seawall")
     :(S.tons<=0?"Clean air. Now go to Support.":"Tap the city to shut a chimney");
   $("#ledger").textContent="$"+S.ledger.toFixed(2);
+  rankProg();
 }
 let listSig="",worldStamp=0;
 function renderLists(force){

@@ -141,7 +141,16 @@
   </section>
 
   <section id="rank">
-    <p class="note">Today only, out of 100, and it resets at midnight. Your own city's day is worth 70 &mdash; the same 70 whether it cuts tonnes, builds shield or both. The last 30 comes only from coins you send elsewhere, so nobody tops this alone. Scores are per player, so a small town and a capital sit on the same scale.</p>
+    <p class="note">Today only, out of 100. 70 from your own city, 30 only from coins you send elsewhere.</p>
+    <!-- Folded, never deleted: this is the answer when a judge asks how the score works. -->
+    <details class="note" id="rankMore"><summary>How the score works</summary>
+    <p>Today only, out of 100, and it resets at midnight. Your own city's day is worth 70 &mdash; the same 70 whether it cuts tonnes, builds shield or both. The last 30 comes only from coins you send elsewhere, so nobody tops this alone. Scores are per player, so a small town and a capital sit on the same scale.</p></details>
+    <!-- Where your own score is heading. Twelfth after sixty taps reads as failure unless the
+         screen says how much of the day those taps were. -->
+    <div class="row prog" id="rankProg">
+      <small id="dutyTxt"></small><div class="bar"><i id="dutyBar"></i></div>
+      <small id="reliefTxt"></small><div class="bar relief"><i id="reliefBar"></i></div>
+    </div>
     <div id="rankList"></div>
     <div class="row" style="margin-top:12px"><div><div class="t">Ad revenue dashboard</div><div class="d">Every ad you finish becomes real money on a public ledger, donated to the city players chose.</div></div><b id="ledger">$0.00</b></div>
   </section>

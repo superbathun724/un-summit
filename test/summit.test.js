@@ -229,5 +229,45 @@ console.log("--- summit 3: a send on Support follows what the city voted for ---
   a.w.close();
 }
 
+console.log("--- summit 4: Ranking shows where your own score is heading ---");
+{
+  let a=boot("ULS");
+  a.tab("rank");
+  const pct=()=>parseFloat(a.$("#dutyBar").style.width),rel=()=>parseFloat(a.$("#reliefBar").style.width);
+  ok(a.$("#dutyTxt").textContent==="Today's duty 0% · full duty = 70 points","duty line: "+a.$("#dutyTxt").textContent);
+  ok(a.$("#reliefTxt").textContent==="Relief sent 0 / 200 coins · +30 points","relief line: "+a.$("#reliefTxt").textContent);
+  ok(a.$("#rankProg .bar #dutyBar")&&a.$("#rankProg .bar #reliefBar"),"both are the existing .bar");
+  ok(a.$("#rank").contains(a.$("#rankProg"))&&a.$("#rankProg").compareDocumentPosition(a.$("#rankList"))&4,"the card sits above the list");
+
+  // Tapping moves duty at once. Ulsan is both: 30 taps of a 300 t cut side is 10% of 2 halves = 5%.
+  a.tab("city");a.tap(30);
+  ok(Math.abs(pct()-100*a.g("dutyDone()"))<1e-9&&pct()>0,"the duty bar moved with the taps: "+a.$("#dutyBar").style.width);
+  ok(a.$("#dutyTxt").textContent==="Today's duty 5% · full duty = 70 points","and its label: "+a.$("#dutyTxt").textContent);
+  // The number shown is the same thing the score is made of.
+  a.tab("rank");
+  ok(Math.abs(+a.$("#rankList .rank.me .v").textContent-70*a.g("dutyDone()"))<0.06,"the board's 70-share and the bar agree");
+
+  // Sending moves relief at once.
+  a.g("S.coins=500");a.tab("support");
+  a.click(a.$('#supportList [data-city="BUS"] .btn[data-cost]'));
+  ok(rel()===10&&/Relief sent 20 \/ 200/.test(a.$("#reliefTxt").textContent),"one send is 10% of the relief bar: "+a.$("#reliefTxt").textContent);
+  for(let i=0;i<14;i++)a.g("give('BUS')");
+  ok(rel()===100&&/Relief sent 200 \/ 200/.test(a.$("#reliefTxt").textContent),"and it stops full at 200: "+a.$("#reliefTxt").textContent);
+
+  // The full explanation is folded, not deleted.
+  const det=a.$("#rank details");
+  ok(!!det&&!det.open,"the long explanation is folded by default");
+  ok(det.textContent.includes("Today only, out of 100, and it resets at midnight. Your own city's day is worth 70 — the same 70 whether it cuts tonnes, builds shield or both. The last 30 comes only from coins you send elsewhere, so nobody tops this alone. Scores are per player, so a small town and a capital sit on the same scale."),
+     "and it still carries the whole original text");
+  ok(a.$("#rank p.note").textContent==="Today only, out of 100. 70 from your own city, 30 only from coins you send elsewhere.",
+     "the open line is the one-sentence summary: "+a.$("#rank p.note").textContent);
+  a.w.close();
+
+  // A defence city's duty is its defence day.
+  a=boot("SOK");a.tap(150);a.tab("rank");
+  ok(a.$("#dutyTxt").textContent.startsWith("Today's duty 25%"),"Sokcho 150 of 600 defence is 25%: "+a.$("#dutyTxt").textContent);
+  a.w.close();
+}
+
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);
 process.exit(fails?1:0);
