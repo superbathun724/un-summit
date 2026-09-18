@@ -655,5 +655,178 @@ console.log("--- task 8: the wall is never finished, and never yours alone ---")
   a.w.close();
 }
 
+console.log("--- task 9: a coastal sky is not its own to clean ---");
+{
+  // The bug: a defence city's smog was fixed forever. Tapping the shore never touched it and
+  // there was no cut ladder to buy, so Busan opened under the same haze every single day.
+  let a=boot("BUS");
+  const h0=+a.$("#smog").style.opacity;
+  ok(h0>0.3,"Busan still opens under real haze, got "+h0);
+  a.tap(200);
+  ok(+a.$("#smog").style.opacity===h0,"tapping the shore does not clear it -- the smoke is not hers");
+  ok(a.g("S.tons")===a.g("Math.min(DAY_CAP,me().base)"),"and her own tonnes never move");
+
+  // What does clear it: paying an emission city to cut.
+  a.g("S.coins=400");
+  const e=a.g("COUNTRIES.find(x=>x.role==='E').c");   // only a pure emission city is a Tech target
+  a.g(`give('${e}')`);
+  ok(a.g("S.techToday")===20,"a Tech send is counted, got "+a.g("S.techToday"));
+  const h1=+a.$("#smog").style.opacity;
+  ok(h1<h0,"and the sky lifts a little ("+h0+" -> "+h1+")");
+  ok(/Your sky clears with theirs/.test(a.$("#ticker").textContent),"and says why: "+a.$("#ticker").textContent);
+  a.g(`S.techToday=SKY_FUND;render()`);
+  ok(+a.$("#smog").style.opacity===0,"a fully funded day is a clear sky, got "+a.$("#smog").style.opacity);
+  ok(/you did not clean it, you paid for it/.test(a.g("(function(){S.coins=100;give('"+e+"');return $('#ticker').textContent})()")),
+     "and the point is stated once it is clear");
+  a.w.close();
+
+  // Relief to another coastal city is not the same thing: it builds a wall, not a sky.
+  a=boot("BUS");
+  const h2=+a.$("#smog").style.opacity;
+  a.g("S.coins=400");
+  a.g("give('SOK')");
+  ok(a.g("S.techToday")===0,"relief to a coastal city is not a Tech send");
+  a.g("give('ULS')");
+  ok(a.g("S.techToday")===0,"nor is relief to a city that is both -- Support offers it Build, not Tech");
+  ok(+a.$("#smog").style.opacity===h2,"and does not clear anyone's sky");
+  a.w.close();
+
+  // Tomorrow the smoke is back: emissions resume, so the funding does too.
+  a=boot("BUS");
+  a.g("S.techToday=SKY_FUND;render()");
+  ok(+a.$("#smog").style.opacity===0,"clear tonight");
+  a.g("S.day='2000-01-01';lastTick=Date.now();tick()");
+  ok(a.g("S.techToday")===0&&+a.$("#smog").style.opacity>0.3,"hazy again in the morning, got "+a.$("#smog").style.opacity);
+  a.w.close();
+
+  // An emission city is untouched: its own tonnes still drive its own sky.
+  a=boot("SEO");
+  const s0=+a.$("#smog").style.opacity;
+  a.g("S.techToday=SKY_FUND;render()");
+  ok(+a.$("#smog").style.opacity===s0,"funding someone else does not clear your own smoke");
+  a.g("S.tons=0;render()");
+  ok(+a.$("#smog").style.opacity===0,"cutting your own does");
+  a.w.close();
+}
+
+console.log("--- task 10: the defence day and the line to reach ---");
+{
+  // The daily defence budget had no place on screen. You found out it existed by hitting it.
+  const a=boot("SOK");
+  ok(/600 left/.test(a.$("#defLeft").textContent),"the day's budget is on the card: "+a.$("#defLeft").textContent);
+  ok(a.$("#defBar").style.width==="0%","and its bar starts empty");
+  a.tap(150);
+  ok(/450 left/.test(a.$("#defLeft").textContent),"it counts down: "+a.$("#defLeft").textContent);
+  ok(a.$("#defBar").style.width==="25%","and fills: "+a.$("#defBar").style.width);
+  a.g("S.def=DEF_CAP;render()");
+  ok(/done/.test(a.$("#defLeft").textContent),"and says so at the end: "+a.$("#defLeft").textContent);
+
+  // The wall: a footing you can see, and the line the whole game argues about.
+  a.g("S.shield.self=0;render()");
+  const h0=+a.$("#wallBody").getAttribute("height");
+  ok(h0>=6,"an empty wall is a footing, not a hairline, got "+h0);
+  a.g("S.shield.self=100;render()");
+  ok(+a.$("#wallBody").getAttribute("height")>h0*4,"and it visibly grows, got "+a.$("#wallBody").getAttribute("height"));
+
+  // The target sits exactly where SAFE would reach, so aiming at it means something.
+  a.g("S.shield.self=SAFE;render()");
+  const line=+a.$("#safeLine").getAttribute("y1"), top=+a.$("#wallBody").getAttribute("y");
+  ok(Math.abs(line-top)<=1,"the wall meets the line exactly at "+a.g("SAFE")+"%, line "+line+" vs top "+top);
+  ok(a.$("#wallCap").getAttribute("fill")==="#8FE3A0","the cap turns green once it holds");
+  ok(+a.$("#safeTxt").getAttribute("opacity")===0,"and the target label steps out of the way");
+  a.g("S.shield.self=SAFE-1;render()");
+  ok(a.$("#wallCap").getAttribute("fill")!=="#8FE3A0","one point short is not green");
+  ok(+a.$("#safeTxt").getAttribute("opacity")>0,"and the target is back");
+  a.g("S.shield.self=SAFE-10;render()");
+  ok(+a.$("#wallBody").getAttribute("y")>line,"and well short of it, the wall sits below the line");
+
+  // It is drawn in front of the boats, or a boat sits on top of the seawall.
+  const kids=[...a.$("#scene svg").children].map(n=>n.id);
+  ok(kids.indexOf("shieldWall")>kids.indexOf("fore"),"the wall is drawn after the foreground: "+kids.join(","));
+  a.w.close();
+
+  // A cut-only city never sees any of it.
+  const b=boot("SEO");
+  ok(b.$("#mDef").hidden===true,"no defence card for a city with no shore to defend");
+  ok(b.$("#shieldWall").getAttribute("opacity")==="0","and no wall");
+  b.w.close();
+}
+
+console.log("--- task 11: the button under your finger is never replaced ---");
+{
+  // The failure this guards against: a list is rebuilt while a finger is down, the node the
+  // press started on is gone, the browser fires the click on the parent, and the tap is lost.
+  // So: hold a reference to the button, act, and check it is still the same live node.
+  const live=el=>el&&el.isConnected;
+
+  // Buying, five times in a row, on the same button.
+  let a=boot("SEO");
+  a.g("S.coins=100000");
+  const btn=a.$('#upgrades [data-up="bus"] button');
+  const price=[];
+  for(let i=0;i<5;i++){price.push(+btn.dataset.cost);a.click(btn)}
+  ok(a.g("S.upg.bus")===5,"five buys landed, got "+a.g("S.upg.bus"));
+  ok(live(btn),"the very same button node is still in the page");
+  ok(btn===a.$('#upgrades [data-up="bus"] button'),"and it is still the one the list shows");
+  ok(price.join()==="40,64,102,164,262","the price climbed in place: "+price.join(", "));
+  ok(btn.textContent==="419","and the next price is on it: "+btn.textContent);
+  ok(a.$('#upgrades [data-up="bus"] [data-n]').textContent==="×5","the count is written in place");
+
+  // A tick in between must not swap it either.
+  const again=a.$('#upgrades [data-up="bus"] button');
+  a.g("worldStamp++;S.given+=20;tick()");
+  ok(again===a.$('#upgrades [data-up="bus"] button'),"a tick leaves the button alone");
+  ok(live(again),"and does not detach it");
+
+  // Switching ladders is structural, so there the rebuild is correct.
+  a.w.close();
+  a=boot("ULS");
+  const cutBtn=a.$('#upgrades [data-up="bus"] button');
+  a.click(a.d.querySelector('#modeSw button[data-mode="def"]'));
+  ok(!live(cutBtn),"changing to the other ladder does replace the rows, which is right");
+  a.w.close();
+
+  // Giving, ten times, on the same button, while the numbers move.
+  a=boot("SOK");
+  a.g("S.coins=100000");
+  a.tab("support");
+  const row=a.$('#supportList [data-city="BUS"]'),gbtn=row.querySelector(".btn[data-cost]");
+  const before=row.querySelector("[data-v]").textContent;
+  for(let i=0;i<10;i++)a.click(gbtn);
+  ok(a.g("S.given")===200,"ten sends landed, got "+a.g("S.given"));
+  ok(live(gbtn)&&gbtn===a.$('#supportList [data-city="BUS"] .btn[data-cost]'),"the same send button survived all ten");
+  ok(row.querySelector("[data-v]").textContent!==before,
+     "and the shield number moved under it: "+before+" -> "+row.querySelector("[data-v]").textContent);
+  a.g("tick()");
+  ok(live(gbtn),"a tick after giving does not replace it either");
+
+  // Your own shield row: still in place while it climbs, rebuilt exactly once at the ceiling.
+  const selfBtn=a.$('#supportList [data-self] .btn[data-cost]');
+  ok(!!selfBtn,"the self row has a button below the ceiling");
+  a.g("S.shield.self=0");a.w.render();
+  const sb=a.$('#supportList [data-self] .btn[data-cost]');
+  for(let i=0;i<7;i++)a.click(a.$('#supportList [data-self] .btn[data-cost]'));
+  ok(a.g("S.shield.self")===35,"seven sends is 35%, got "+a.g("S.shield.self"));
+  ok(live(sb),"the self button survived all seven");
+  a.click(sb);
+  ok(a.g("S.shield.self")===40,"the eighth reaches the ceiling");
+  ok(!live(sb),"and only then is the row replaced, because the buttons must go");
+  ok(!a.$('#supportList [data-self] .btn[data-cost]'),"which they did");
+  a.w.close();
+
+  // An emergency appearing is structural: the row has to be pinned to the top.
+  a=boot("SOK");a.tab("support");
+  const plain=a.$('#supportList [data-city="BUS"]');
+  a.g("emgAdd('BUS');tick()");
+  ok(!live(plain),"a wave landing does rebuild the list, which is the point of pinning it");
+  ok(!!a.$('#supportList [data-emgrow="BUS"]'),"and the red row is there");
+  const eb=a.$('#supportList [data-emgrow="BUS"] .btn[data-cost]');
+  a.g("S.coins=1000");a.click(eb);a.click(eb);
+  ok(live(eb),"but relief sent inside the window does not replace it");
+  ok(/%/.test(a.$('#supportList [data-emgrow="BUS"] [data-v]').textContent),
+     "and its shield reads live: "+a.$('#supportList [data-emgrow="BUS"] [data-v]').textContent);
+  a.w.close();
+}
+
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);
 process.exit(fails?1:0);

@@ -31,11 +31,33 @@ Open `index.html` in a browser. No build step.
 
 `.nojekyll` is included so Pages serves the files as-is.
 
+### 4. Set the site URL (required once)
+
+`og:url` and `og:image` in `index.html` are absolute and ship with a placeholder
+(`https://example.github.io/youth-leader/`). Replace it with the real Pages address in both.
+Until you do, the link pastes into KakaoTalk, Slack or Discord as a bare URL with no title,
+no description and no picture — which is the whole point of sharing one link.
+
+`npm test` checks that the two tags agree with each other. It cannot check that the address
+is right, so paste the deployed link into a chat with yourself once and look at it.
+
 ## Tests (optional, dev only)
 ```
 npm install
 npm test
 ```
 Headless regression checks. The app needs none of this — see `test/README.md`.
+
+## Files
+
+| file | what it is |
+|---|---|
+| `index.html` | markup, and the head tags a shared link depends on |
+| `styles.css` | styles |
+| `app.js` | all the logic. A classic script, not a module — inline `onclick` handlers depend on that |
+| `icon.svg`, `icon-180/192/512.png` | favicon, iOS home screen, Android home screen |
+| `og.png` | the 1200×630 picture a chat app shows for the link |
+| `manifest.webmanifest` | lets a phone add the game to its home screen |
+| `.nojekyll` | makes Pages serve the files as-is |
 
 See `HANDOVER.md` for the full context, decisions, and to-do list.

@@ -4,6 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>YOUTH LEADER</title>
+<meta name="description" content="A click game for the 2026 World Tsunami Awareness Day High School Summit. Tap to cut your city's emissions or build its shield. Coins can only be spent on another city.">
+<meta name="theme-color" content="#0E2A47">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<!-- ====================================================================
+     AFTER THE FIRST DEPLOY, EDIT THE TWO ABSOLUTE URLS BELOW.
+     A link pasted into KakaoTalk or Slack shows nothing but the bare URL
+     until these are right, and og:image will not accept a relative path.
+     Replace https://example.github.io/youth-leader/ with the real Pages
+     address in both og:url and og:image. Nothing else needs touching.
+     `npm test` checks that the two agree, not that they are correct.
+     ==================================================================== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="YOUTH LEADER">
+<meta property="og:title" content="YOUTH LEADER — every tap cuts a tonne">
+<meta property="og:description" content="Tap to cut your city's emissions or build its shield. Coins can only be spent on another city. Built by three high school students in Ulsan for the 2026 World Tsunami Awareness Day Summit.">
+<meta property="og:url" content="https://example.github.io/youth-leader/">
+<meta property="og:image" content="https://example.github.io/youth-leader/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A city skyline above a sea wall, under the words YOUTH LEADER.">
+<meta name="twitter:card" content="summary_large_image">
+
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -50,9 +75,18 @@
             <g transform="translate(155,95)"><rect x="-2" y="0" width="4" height="115" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
             <g transform="translate(305,85)"><rect x="-2" y="0" width="4" height="125" fill="#e8eef2"/><g class="rotor"><path d="M0 0 L-3 -30 L3 -30Z M0 0 L26 15 L23 21Z M0 0 L-26 15 L-23 21Z" fill="#e8eef2"/></g></g>
           </g>
-          <g id="shieldWall" opacity="0"><rect id="wallBody" x="0" y="222" width="420" height="10" fill="#8fb3c9"/><rect id="wallCap" x="0" y="219" width="420" height="3" fill="#dbe9f1"/></g>
-        </g>
+          </g>
         <g id="fore"></g>
+        <!-- Out in the water and drawn last: against the dark ground band it read as part of
+             the shore, and behind the boats it looked like a boat was sitting on the wall.
+             In front of them it is a breakwater and they are sheltered behind it. -->
+        <g id="shieldWall" opacity="0">
+          <rect x="-100" y="288" width="620" height="9" fill="#3d5c70"/>
+          <rect id="wallBody" x="-100" y="278" width="620" height="10" fill="#8fb3c9"/>
+          <rect id="wallCap" x="-100" y="275" width="620" height="3" fill="#dbe9f1"/>
+          <line id="safeLine" x1="-100" x2="520" stroke="#F2B134" stroke-width="1.6" stroke-dasharray="7 6"/>
+          <text id="safeTxt" x="24" font-size="11" font-weight="700" fill="#F2B134">50% holds a wave</text>
+        </g>
       </svg>
       <div id="smog"></div>
       <div id="wave"></div>
@@ -66,7 +100,7 @@
 
     <div id="meters">
       <div class="meter" id="mCut"><small>Today's emissions left</small><b id="tons">0 t</b><div class="bar"><i id="tonsBar"></i></div><small id="streak"></small></div>
-      <div class="meter" id="mDef"><small id="defLbl">Your shield</small><b id="shieldPct">0%</b><div class="bar"><i id="shieldBar"></i></div></div>
+      <div class="meter" id="mDef"><small id="defLbl">Your shield</small><b id="shieldPct">0%</b><div class="bar"><i id="shieldBar"></i></div><small id="defLeft"></small><div class="bar thin"><i id="defBar"></i></div></div>
     </div>
     <div id="ticker"></div>
 

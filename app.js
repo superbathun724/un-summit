@@ -99,8 +99,14 @@ const SELF_MAX=40;
 // Holding 50% costs upkeep every day, which is what makes relief from elsewhere worth sending
 // more than once.
 const SHIELD_DECAY=10;
+// A coastal town cannot clean its own air. The smoke is not its own, so tapping the shore
+// will never move it -- and until now nothing else could either: half the pilot cities sat
+// under a haze that was fixed for good. Its sky clears when the emission cities cut, which
+// is what a Tech send pays for. 300 coins is half a day's tapping, so a day's work buys you
+// a clear sky and still leaves something for your own wall.
+const SKY_FUND=300;
 let S={uid:null,c:null,tons:0,coins:0,cut:0,given:0,upg:{},day:null,streak:0,taps:0,ledger:0,shield:{},
-       mode:"cut",def:0,defAcc:0,defTotal:0,ads:0,adAt:0,vote:null,notes:[],at:0,gaveToday:0};
+       mode:"cut",def:0,defAcc:0,defTotal:0,ads:0,adAt:0,vote:null,notes:[],at:0,gaveToday:0,techToday:0};
 // Rewarded ads only, never forced. The player opens each one. The caps keep it from becoming
 // an ad-watching loop and sit inside what ad networks allow for rewarded web ads.
 const AD_SEC=5;                   // stand-in length. A real rewarded ad runs 15-30 s.
@@ -135,9 +141,8 @@ function emgClocks(){const now=Date.now();document.querySelectorAll("[data-emg]"
   el.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")})}
 function emgRow(e){
   const x=COUNTRIES.find(y=>y.c===e.c),mine=x.c===S.c;
-  const sh=mine?(S.shield.self||0):WORLD[e.c].shield;
-  return `<div class="row emg"><div><div class="t">${mine?"Your city":x.n} was hit <span class="tag SOS">LIVE</span></div>`+
-    `<div class="d">Shield ${sh}%. Relief counts double for <span class="clock" data-emg="${e.c}">3:00</span></div></div>`+
+  return `<div class="row emg" data-emgrow="${e.c}"><div><div class="t">${mine?"Your city":x.n} was hit <span class="tag SOS">LIVE</span></div>`+
+    `<div class="d">Shield <span data-v></span>. Relief counts double for <span class="clock" data-emg="${e.c}">3:00</span></div></div>`+
     `<div class="bg"><button class="btn coin" data-cost="20" onclick="give('${mine?"self":e.c}')">20 &rarr; +10%</button>${adBtn(mine?"self":e.c)}</div></div>`;
 }
 
@@ -234,7 +239,7 @@ function rollDay(){
   if(S.day===today())return false;
   const wasYesterday=S.day&&(new Date(today())-new Date(S.day))/864e5===1;
   S.streak=wasYesterday?S.streak+1:1;
-  S.day=today();S.tons=Math.min(DAY_CAP,me().base);S.taps=0;S.def=0;S.ads=0;S.gaveToday=0;
+  S.day=today();S.tons=Math.min(DAY_CAP,me().base);S.taps=0;S.def=0;S.ads=0;S.gaveToday=0;S.techToday=0;
   // The sea keeps rising, so yesterday's wall is not today's wall. Nothing else decays --
   // tonnes cut and coins given are history and history does not un-happen.
   if(S.shield.self)S.shield.self=Math.max(0,S.shield.self-SHIELD_DECAY);
@@ -343,7 +348,7 @@ function inbound(){
   toast(crossed
     ?`${x.n} sent relief. Your shield is ${S.shield.self}% and the next wave will hold. You could not have got here alone.`
     :`${x.n} sent 20 coins of relief. +${up}% shield.`);
-  render();save();
+  refresh();save();
 }
 
 function disaster(){
@@ -469,6 +474,9 @@ function scenery(){
 // Split on purpose: a tap only touches the scene and the meters. Rebuilding the three
 // lists on every tap made taps feel slow on cheap Android phones.
 function render(){renderTop();renderLists(true)}
+// After anything that only moves numbers. renderLists() rebuilds a list only when its
+// signature says the set of rows changed; otherwise syncRows() writes the new values in.
+function refresh(){renderTop();renderLists()}
 function renderTop(){
   const k=me(),m=mode(),cap=Math.min(DAY_CAP,k.base),sh=S.shield.self||0;
   $("#chip").className="chip role-"+k.role;$("#chipTxt").textContent=k.n;
@@ -490,13 +498,35 @@ function renderTop(){
   if($("#streak").parentNode!==host)host.appendChild($("#streak"));
   // Smog is absolute, not a fraction of the city's own day: a fishing town at 60 t must not
   // open under the same brown sky as a refinery city at 900 t.
-  $("#smog").style.opacity=Math.max(0,S.tons/cap*Math.min(1,k.base/DAY_CAP)*0.95);
+  // Same absolute scale as before -- a fishing town must never open under a refinery sky --
+  // but what is left of it now depends on who is supposed to be cutting. An emission city
+  // clears its own; a coastal city clears its own by paying for someone else's.
+  const left=k.role==="R"?1-Math.min(1,(S.techToday||0)/SKY_FUND):S.tons/cap;
+  $("#smog").style.opacity=Math.max(0,left*Math.min(1,k.base/DAY_CAP)*0.95);
   $("#turbines").setAttribute("opacity",S.upg.wind?1:0);
   document.querySelectorAll(".stack").forEach((s,i)=>s.style.opacity=(S.upg.wind&&i<3)?0:1);
-  const h=Math.max(4,Math.round(sh*0.3));
-  $("#wallBody").setAttribute("y",232-h);$("#wallBody").setAttribute("height",h);
-  $("#wallCap").setAttribute("y",229-h);
-  $("#shieldWall").setAttribute("opacity",(m==="def"||sh>=50)?1:0);
+  // The day's defence budget, which had no place on screen at all: a defence player could
+  // only find out it existed by hitting it.
+  const dleft=Math.max(0,DEF_CAP-S.def);
+  $("#defLeft").textContent=dleft>0?`Today's defence: ${Math.round(dleft)} left`:"Today's defence: done";
+  $("#defBar").style.width=(100*S.def/DEF_CAP)+"%";
+  // 0.35 and a floor of 6, so an empty wall is a footing you can see blocks land on rather
+  // than a 4px hairline under a sign telling you to raise it.
+  // Anchored at 248, out in the water. The old wall sat at 232 and grew up into the dark
+  // ground band, so at any useful height it read as part of the shore and the target line
+  // landed on top of the buildings. Against the sea it is a breakwater and you can see it.
+  const FOOT=288, RISE=0.30;
+  const h=Math.max(6,Math.round(sh*RISE)), sy=FOOT-SAFE*RISE, held=sh>=SAFE;
+  $("#wallBody").setAttribute("y",FOOT-h);$("#wallBody").setAttribute("height",h);
+  $("#wallCap").setAttribute("y",FOOT-3-h);
+  $("#wallCap").setAttribute("fill",held?"#8FE3A0":"#dbe9f1");
+  // The line the whole game argues about, drawn where it actually is.
+  $("#safeLine").setAttribute("y1",sy);$("#safeLine").setAttribute("y2",sy);
+  $("#safeLine").setAttribute("opacity",held?.3:.95);
+  $("#safeTxt").setAttribute("y",sy-5);
+  $("#safeTxt").setAttribute("opacity",held?0:.95);
+  $("#safeTxt").textContent=`${SAFE}% holds a wave`;
+  $("#shieldWall").setAttribute("opacity",(m==="def"||held)?1:0);
   $("#hint").textContent=m==="def"
     ?(S.def>=DEF_CAP?"Today's work is done. Now go to Support.":"Tap the shore to raise the seawall")
     :(S.tons<=0?"Clean air. Now go to Support.":"Tap the city to shut a chimney");
@@ -506,23 +536,25 @@ let listSig="",worldStamp=0;
 function renderLists(force){
   const k=me();
   const tab=$("nav button.on").dataset.tab;
-  // Coins are deliberately out of this signature. They move every second once an upgrade is
-  // running, and rebuilding a list replaces the very button a finger is already down on --
-  // the browser then fires the click on the parent and the tap is lost. Prices and labels
-  // only change when something structural does; affordability is synced in place below.
-  // Voice gets its own signature. The others carry worldStamp, which moves whenever a wave
-  // lands anywhere -- and a redraw while someone is typing would throw the sentence away.
-  const sig=tab==="voice"
-    ?["voice",S.vote,S.notes.length].join("|")
-    :[tab,mode(),JSON.stringify(S.upg),S.given,S.shield.self||0,worldStamp,tab==="rank"?Math.round(dayScore()*10):0].join("|");
+  // This signature answers one question only: which rows should exist? Never what they say.
+  // Rebuilding a list replaces the very button a finger is already down on, the browser then
+  // fires the click on the parent, and the tap is gone -- every second or third press on a
+  // cheap Android. Every number in these lists is written in place by syncRows() instead.
+  // Ranking is the exception: it reorders, so it has to be rebuilt. It has no buttons.
+  const sig=tab==="voice"?["voice",S.vote,S.notes.length].join("|")
+    :tab==="city"?["city",mode()].join("|")
+    :tab==="rank"?["rank",Math.round(dayScore()*10),worldStamp].join("|")
+    :["support",worldStamp,k.role,(S.shield.self||0)>=SELF_MAX?1:0].join("|");
   if(force||sig!==listSig){
   listSig=sig;
   if(tab==="city"){
   $("#cityNote").textContent=mode()==="def"
-    ?"Upgrades keep building while you're away. A siren and a mangrove belt work at 3 a.m. too."
+    ?"Upgrades keep building while you're away. A siren and a mangrove belt work at 3 a.m. too. The haze over your city is not yours — send Tech coins to an industrial city and watch it lift."
     :"Upgrades cut emissions for you while you're away. Real cities do the same: one bus line replaces hundreds of cars every day.";
-  $("#upgrades").innerHTML=upSet().map((u,i)=>{const n=S.upg[u.id]||0;const cost=Math.round(u.cost*Math.pow(1.6,n));
-    return `<div class="row"><div><div class="t">${upName(u,i)}${n?` <span class="tag">×${n}</span>`:""}</div><div class="d">${u.d}</div></div><button class="btn coin" data-cost="${cost}" onclick="buy('${u.id}',${cost})">${cost}</button></div>`}).join("");
+  // No numbers in here. The count and the price are written in by syncRows() afterwards, so
+  // buying never has to replace the button the finger is still on.
+  $("#upgrades").innerHTML=upSet().map((u,i)=>
+    `<div class="row" data-up="${u.id}"><div><div class="t">${upName(u,i)} <span class="tag" data-n hidden></span></div><div class="d">${u.d}</div></div><button class="btn coin" data-cost="0" onclick="buy('${u.id}')"></button></div>`).join("");
   }
   else if(tab==="voice"){renderVoice()}
   else if(tab==="support"){
@@ -530,20 +562,50 @@ function renderLists(force){
   // At the ceiling the row keeps no buttons at all. A coin button that does nothing would
   // still take the coins, and an ▶ Ad button would burn one of the ten for no reward.
   const sh=S.shield.self||0, capped=sh>=SELF_MAX;
-  const selfRow=(k.role!=="E"&&!emgFind(S.c))?`<div class="row"><div><div class="t">Your own shield <span class="tag R">${sh}%</span></div><div class="d">${capped
+  const selfRow=(k.role!=="E"&&!emgFind(S.c))?`<div class="row" data-self><div><div class="t">Your own shield <span class="tag R" data-v></span></div><div class="d">${capped
       ?`Your own work stops here. Only another city's relief reaches ${SAFE}%.`
       :`Seawall + early warning. Your own coins raise this to ${SELF_MAX}%; a wave holds at ${SAFE}%.`}</div></div>${capped
       ?""
       :`<div class="bg"><button class="btn" data-cost="20" onclick="give('self')">20 → +5%</button>${adBtn("self")}</div>`}</div>`:"";
-  $("#supportList").innerHTML=EMG.map(emgRow).join("")+selfRow+targets.map(x=>{const w=WORLD[x.c];const isR=x.role!=="E";
-    return `<div class="row"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d">${isR?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`}</div></div><div class="bg"><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button>${adBtn(x.c)}</div></div>`}).join("");
+  $("#supportList").innerHTML=EMG.map(emgRow).join("")+selfRow+targets.map(x=>{const isR=x.role!=="E";
+    return `<div class="row" data-city="${x.c}"><div><div class="t">${x.n} <span class="tag ${x.role}">${ROLE_LABEL[x.role]}</span></div><div class="d" data-v></div></div><div class="bg"><button class="btn" data-cost="20" onclick="give('${x.c}')">${isR?"Build":"Tech"} 20</button>${adBtn(x.c)}</div></div>`}).join("");
   }
   else{
   const rows=COUNTRIES.map(x=>{const mine=x.c===S.c;return{x,score:mine?dayScore():WORLD[x.c].score,me:mine}}).sort((a,b)=>b.score-a.score);
   $("#rankList").innerHTML=rows.map((r,i)=>`<div class="rank${r.me?" me":""}"><span class="n">${i+1}</span><span>${r.x.n}<span class="tag ${r.x.role}">${ROLE_LABEL[r.x.role]}</span></span><span class="v">${r.score.toFixed(1)}</span></div>`).join("");
   }
   }
-  emgDot();voiceDot();affordable();
+  emgDot();voiceDot();syncRows();
+}
+const upCost=(u,n)=>Math.round(u.cost*Math.pow(1.6,n));
+// Write today's numbers into the rows that are already on screen. This is the whole point of
+// the split: a price, a count, a shield percentage and an affordability state all change
+// constantly, and not one of them is worth losing a tap over.
+function syncRows(){
+  const tab=$("nav button.on").dataset.tab;
+  if(tab==="city"){
+    const set=upSet();
+    document.querySelectorAll("#upgrades [data-up]").forEach(r=>{
+      const u=set.find(y=>y.id===r.dataset.up);if(!u)return;
+      const n=S.upg[u.id]||0,tag=r.querySelector("[data-n]"),b=r.querySelector("button");
+      // Emptied, not just hidden: a hidden node still contributes to textContent, and the
+      // row label is read as text in a few places.
+      tag.hidden=!n;tag.textContent=n?"×"+n:"";
+      b.dataset.cost=upCost(u,n);b.textContent=upCost(u,n);
+    });
+  }else if(tab==="support"){
+    document.querySelectorAll("#supportList [data-city]").forEach(r=>{
+      const x=COUNTRIES.find(y=>y.c===r.dataset.city),w=WORLD[r.dataset.city];
+      r.querySelector("[data-v]").textContent=x.role!=="E"?`Shield ${w.shield}%`:`Clean-up ${Math.min(100,Math.round(w.cut*3))}%`;
+    });
+    document.querySelectorAll("#supportList [data-emgrow]").forEach(r=>{
+      const c=r.dataset.emgrow;
+      r.querySelector("[data-v]").textContent=(c===S.c?(S.shield.self||0):WORLD[c].shield)+"%";
+    });
+    const self=$("#supportList [data-self] [data-v]");
+    if(self)self.textContent=(S.shield.self||0)+"%";
+  }
+  affordable();
 }
 // Grey a button out or bring it back without replacing the node.
 function affordable(){document.querySelectorAll("section.on .btn[data-cost]").forEach(b=>{b.disabled=S.coins<+b.dataset.cost});adSync()}
@@ -642,7 +704,16 @@ function adClose(done){
 $("#adDone").onclick=()=>{if(AD&&Date.now()>=AD.until)adClose(true)};
 $("#adSkip").onclick=()=>adClose(false);
 
-function buy(id,cost){if(S.coins<cost)return;S.coins-=cost;S.upg[id]=(S.upg[id]||0)+1;render();save();if(id==="wind"&&S.upg.wind===1)toast("Three chimneys became turbines. The sky clears a little faster now.")}
+// The price is worked out here rather than passed in from the button. The button is no
+// longer rebuilt on every purchase, so a baked-in price would go stale on the second buy.
+function buy(id){
+  const u=upSet().find(y=>y.id===id);if(!u)return;
+  const n=S.upg[id]||0,cost=upCost(u,n);
+  if(S.coins<cost)return;
+  S.coins-=cost;S.upg[id]=n+1;
+  refresh();save();
+  if(id==="wind"&&S.upg.wind===1)toast("Three chimneys became turbines. The sky clears a little faster now.");
+}
 // free = paid by a finished ad instead of the player's coins. Everything else is the same.
 function give(c,free){if(!free&&S.coins<20)return;
   if(c==="self"&&(S.shield.self||0)>=SELF_MAX){
@@ -653,9 +724,16 @@ function give(c,free){if(!free&&S.coins<20)return;
   else{const x=COUNTRIES.find(y=>y.c===c);
     if(x.role!=="E"){const was=WORLD[c].shield;WORLD[c].shield=Math.min(100,was+step);
       if(was<SAFE&&WORLD[c].shield>=SAFE)toast(`${x.n}'s shield just reached 50%. The next wave there will hold.`)}
-    else WORLD[c].cut+=dbl?4:2}
+    else{WORLD[c].cut+=dbl?4:2;
+      S.techToday+=20;
+      if(me().role==="R"){const pc=Math.round(100*Math.min(1,S.techToday/SKY_FUND));
+        ticker(pc>=100?`${x.n} is cutting. Your sky is clear today — you did not clean it, you paid for it.`
+                      :`${x.n} is cutting. Your sky clears with theirs: ${pc}% of today's smoke funded.`,"good")}}}
   if(dbl)toast("Relief doubled. It arrived while the water was still there.");
-  worldStamp++;render();save()}
+  // No worldStamp here any more: nothing about which rows exist has changed, only what they
+  // say, and syncRows() says it. Crossing SELF_MAX does change the self row, and the support
+  // signature carries that, so refresh() rebuilds exactly then and not otherwise.
+  refresh();save()}
 // localStorage writes are synchronous. One per tap stutters on a phone, so batch them
 // and always flush when the browser is backgrounded or the tab is closed.
 // Both guard on S.c: before the player presses Play, S is still the blank starting object.

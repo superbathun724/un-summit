@@ -123,5 +123,41 @@ ok(d.querySelectorAll("#supportList .row.emg").length===3,"3 pinned rows, got "+
 w.emgClocks();
 ok([...d.querySelectorAll(".clock")].every(c=>/^[0-3]:[0-5]\d$/.test(c.textContent)),"all clocks tick");
 
+console.log("--- the link itself ---");
+{
+  // A pilot that spreads by one pasted link. If the head is wrong, the link is a bare URL
+  // in every chat app and nobody taps it.
+  const d2=new JSDOM(html).window.document;
+  const meta=(sel,at)=>{const e=d2.querySelector(sel);return e?e.getAttribute(at||"content"):null};
+  ok((meta('meta[name="description"]')||"").length>60,"a real page description is set");
+  ok(meta('meta[name="theme-color"]')==="#0E2A47","the phone browser bar matches the app");
+  ok(meta('link[rel="icon"]',"href")==="icon.svg","an icon is declared");
+  ok(meta('link[rel="apple-touch-icon"]',"href")==="icon-180.png","and one iOS can use");
+  ok(meta('link[rel="manifest"]',"href")==="manifest.webmanifest","the manifest is linked");
+  ["og:type","og:site_name","og:title","og:description","og:url","og:image","og:image:alt"]
+    .forEach(k=>ok((meta(`meta[property="${k}"]`)||"").length>0,k+" is set"));
+  ok(meta('meta[name="twitter:card"]')==="summary_large_image","the card is the big one");
+
+  // og:image must be absolute, and must sit under og:url -- the single mistake that is easy
+  // to make here is editing one of the two after the deploy and forgetting the other.
+  const url=meta('meta[property="og:url"]'),img=meta('meta[property="og:image"]');
+  ok(/^https:\/\//.test(img),"og:image is absolute, which scrapers require: "+img);
+  ok(url.endsWith("/"),"og:url ends in a slash: "+url);
+  ok(img===url+"og.png","og:image sits under og:url ("+url+" vs "+img+")");
+  ok(+meta('meta[property="og:image:width"]')===1200&&+meta('meta[property="og:image:height"]')===630,
+     "and its declared size is the 1200x630 the file actually is");
+
+  // The files those tags point at have to exist, or the card is a broken image.
+  ["og.png","icon.svg","icon-180.png","icon-192.png","icon-512.png","manifest.webmanifest"]
+    .forEach(f=>ok(fs.existsSync(path.join(dir,f)),f+" is in the repo"));
+
+  const mf=JSON.parse(read("manifest.webmanifest"));
+  ok(mf.start_url==="./"&&mf.scope==="./","the manifest uses relative paths, so any repo name works");
+  ok(mf.display==="standalone","added to a home screen it opens without browser chrome");
+  ok(mf.theme_color===meta('meta[name="theme-color"]'),"and its theme colour agrees with the page");
+  ok(mf.icons.some(i=>i.purpose==="maskable"),"one icon is maskable for Android");
+  mf.icons.forEach(i=>ok(fs.existsSync(path.join(dir,i.src)),"manifest icon exists: "+i.src));
+}
+
 console.log(fails?`\n${fails} FAILED, ${passes} passed`:`\nALL ${passes} CHECKS PASSED`);
 process.exit(fails?1:0);

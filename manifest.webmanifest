@@ -1,0 +1,16 @@
+{
+  "name": "YOUTH LEADER",
+  "short_name": "YOUTH LEADER",
+  "description": "A click game for the 2026 World Tsunami Awareness Day High School Summit. Tap to cut your city's emissions or build its shield. Coins can only be spent on another city.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E2A47",
+  "theme_color": "#0E2A47",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
