@@ -149,6 +149,21 @@ console.log("--- the link itself ---");
   ok(/^https:\/\//.test(img),"og:image is absolute, which scrapers require: "+img);
   ok(url.endsWith("/"),"og:url ends in a slash: "+url);
   ok(img===url+"og.png","og:image sits under og:url ("+url+" vs "+img+")");
+
+  // The address itself, derived from where this repo actually pushes. The repo was renamed
+  // from un_summit to un-summit and these two tags kept pointing at the old name, so the
+  // live share card fetched a 404 and every pasted link showed nothing.
+  const cfg=(()=>{try{return fs.readFileSync(path.join(dir,".git","config"),"utf8")}catch(e){return ""}})();
+  const origin=/url\s*=\s*.*github\.com[:/]([^/\s]+)\/([^\s]+?)(?:\.git)?\s*$/m.exec(cfg);
+  if(origin){
+    const want=`https://${origin[1]}.github.io/${origin[2]}/`;
+    ok(url===want,"og:url matches the repo this pushes to: expected "+want+", got "+url);
+  }else{
+    ok(true,"no git remote to check the address against (a clone without one is fine)");
+  }
+  // and prove the guard bites: the wrong name must not slip through
+  const check=(u,repo)=>u===`https://superbathun724.github.io/${repo}/`;
+  ok(!check(url,"un_summit"),"the old underscore name would be caught");
   ok(+meta('meta[property="og:image:width"]')===1200&&+meta('meta[property="og:image:height"]')===630,
      "and its declared size is the 1200x630 the file actually is");
 

@@ -42,12 +42,12 @@ change rather than a data migration. See `HANDOVER.md` §6.
 Open `index.html` in a browser. No build step.
 
 ## Deploy to GitHub Pages
-This repo already pushes to `github.com/superbathun724/un_summit`.
+This repo already pushes to `github.com/superbathun724/un-summit`.
 
 1. Push `main`.
 2. Repo → Settings → Pages → Source: **Deploy from a branch** → Branch: `main` / `(root)` → Save.
    The repo has to be **public** for Pages on a free account.
-3. Wait ~1 min. The link is `https://superbathun724.github.io/un_summit/`
+3. Wait ~1 min. The link is `https://superbathun724.github.io/un-summit/`
 
 `.nojekyll` is included so Pages serves the files as-is.
 
@@ -55,7 +55,7 @@ This repo already pushes to `github.com/superbathun724/un_summit`.
 
 `og:url` and `og:image` in `index.html` are already set to this repo's Pages address:
 
-    https://superbathun724.github.io/un_summit/
+    https://superbathun724.github.io/un-summit/
 
 If the repo is renamed or moved, change both. `npm test` checks that the two agree with each
 other — it cannot check that the address is reachable, so once Pages is live, paste the link
