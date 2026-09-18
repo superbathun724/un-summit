@@ -4,7 +4,33 @@ A casual click game. What a tap does depends on your city: a high-emission city 
 
 Built by SeYeon, MinChae, JiHun — Hyundai Chungun High School, Ulsan, for the 2026 World Tsunami Awareness Day High School Summit.
 
+**Live: <https://superbathun724.github.io/un-summit/>**
+
+## Run locally
+
+Open `index.html` in a browser. No build step. The page loads `styles.css` and `app.js`
+next to it, so keep the three together.
+
+## Deploy
+
+
+Pages is already on: `main` / `(root)`, served at the link above. Pushing to `main` deploys.
+`.nojekyll` is included so Pages serves the files as-is, and the repo has to stay **public**
+for Pages on a free account.
+
+If the repo is ever renamed, `og:url` and `og:image` in `index.html` must be changed to match.
+`npm test` derives the expected address from the git remote and fails if they disagree — this
+already broke once, when `un_summit` became `un-summit` and every shared link showed nothing.
+
+## Check the share card after a deploy
+
+
+`npm test` cannot tell whether the address is reachable. Paste the link into a chat with
+yourself and look: a title, a description and a picture should appear. If it shows as a bare
+URL, the two `og:` tags are wrong. KakaoTalk caches hard — add `?v=2` to force a refetch.
+
 ## City data (placeholder)
+
 
 Each city's role (high-emission / disaster-risk / both), its starting daily tonnes and its
 population are **placeholders**. `DATA_SOURCED` in `app.js` is `false` and the first screen
@@ -38,31 +64,8 @@ city. Write the conversion you used here when you do it.
 out; the field exists so that adding "what share of this city turned up" later is a formula
 change rather than a data migration. See `HANDOVER.md` §6.
 
-## Run locally
-Open `index.html` in a browser. No build step.
-
-## Deploy to GitHub Pages
-This repo already pushes to `github.com/superbathun724/un-summit`.
-
-1. Push `main`.
-2. Repo → Settings → Pages → Source: **Deploy from a branch** → Branch: `main` / `(root)` → Save.
-   The repo has to be **public** for Pages on a free account.
-3. Wait ~1 min. The link is `https://superbathun724.github.io/un-summit/`
-
-`.nojekyll` is included so Pages serves the files as-is.
-
-### 4. Check the share card
-
-`og:url` and `og:image` in `index.html` are already set to this repo's Pages address:
-
-    https://superbathun724.github.io/un-summit/
-
-If the repo is renamed or moved, change both. `npm test` checks that the two agree with each
-other — it cannot check that the address is reachable, so once Pages is live, paste the link
-into a chat with yourself and look at it. A title, a description and a picture should appear.
-If the link shows as a bare URL, the address in those two tags is wrong.
-
 ## Tests (optional, dev only)
+
 ```
 npm install
 npm test
@@ -70,6 +73,7 @@ npm test
 Headless regression checks. The app needs none of this — see `test/README.md`.
 
 ## Files
+
 
 | file | what it is |
 |---|---|
