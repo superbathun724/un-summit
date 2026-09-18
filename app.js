@@ -7,6 +7,16 @@
 // Flip this in the same commit that replaces the numbers, and fill in the year column in
 // README. A test checks the claim and the flag agree, so they cannot drift apart again.
 const DATA_SOURCED=false;
+// ?demo=1 -- the summit stage. Four minutes, no waiting: the day opens half done, a wave has
+// already landed somewhere, and nothing about it is ever written to this phone. See demoSeed().
+const DEMO=/[?&]demo=1(&|$)/.test(location.search);
+// What the staged day opens with. Every one of these is a stage choice, not game balance.
+const DEMO_COINS=300;     // enough to buy and to send on stage without tapping for it first
+const DEMO_UPG=1;         // one first-rung upgrade: shows "it runs on its own" without eating the day in a minute
+const DEMO_DONE=0.25;     // a quarter of today's work done: the sky is visibly lifting, most of the day is left to tap
+const DEMO_SHIELD=35;     // just under SAFE and under SELF_MAX: "one more relief and it holds" is the next line
+const DEMO_STREAK=4;      // a streak that reads as a habit, not as a first visit
+const DEMO_HIT_SHIELD=20; // a wave only pins a city below SAFE, so the city it hits must really be below it
 // role: E = high-emission, R = disaster-risk, B = both. base = starting daily tonnes (relative scale)
 // ---- PILOT MODE: Korean cities. Switch REGIONS to COUNTRIES_GLOBAL when going global (see HANDOVER.md) ----
 const REGIONS_KOREA = [
@@ -198,6 +208,8 @@ const $=s=>document.querySelector(s);
 $("#gateWhy").textContent=DATA_SOURCED
   ?"Pick your city. Its role comes from public data, not from us: industrial cities cut emissions, coastal cities build protection, and some do both."
   :"Pick your city. Industrial cities cut emissions, coastal cities build protection, and some do both. These roles are our own first estimate — we have not replaced them with published figures yet.";
+// Small, but always on screen: a judge must never read a staged day as real data.
+$("#demoTag").hidden=!DEMO;
 const sel=$("#countrySel");
 COUNTRIES.forEach(k=>{const o=document.createElement("option");o.value=k.c;o.textContent=`${k.n} — ${ROLE_LABEL[k.role]}`;sel.appendChild(o)});
 (function guessCountry(){
@@ -223,6 +235,10 @@ sel.onchange=gateSync;
 // this phone holds one save, and the game is one city per device on purpose.
 function gateSync(){
   const c=sel.value,x=COUNTRIES.find(y=>y.c===c);
+  // A demo never touches the save, so switching city there loses nothing and says so.
+  if(DEMO){$("#gateKeep").hidden=!started;$("#gateWarn").hidden=true;
+    if(started)$("#gateKeep").textContent="Keep playing as "+me().n;
+    $("#startBtn").textContent="Start demo as "+x.n;return}
   const cur=started?S.c:(savedCity?saved.c:null);
   const leaving=cur&&cur!==c, mine=COUNTRIES.find(y=>y.c===cur);
   $("#gateKeep").hidden=!started;
@@ -253,13 +269,14 @@ $("#startBtn").onclick=()=>{
     if(c===S.c){gateSync();return}
     S=Object.assign(JSON.parse(BLANK),{uid:uid(),c});
     EMG=[];worldStamp++;listSig="";
-    rollDay();buildWorld();scenery();lastTick=Date.now();
-    render();ticker("");flush();gateSync();
+    rollDay();buildWorld();ticker("");if(DEMO)demoSeed();scenery();lastTick=Date.now();
+    render();flush();gateSync();
     toast("Starting over as "+me().n+".");
     return;
   }
   started=true;
-  if(savedCity&&saved.c===c){S=Object.assign({},S,saved,{upg:saved.upg||{},shield:saved.shield||{},notes:saved.notes||[]})}else{S.uid=uid();S.c=c}
+  if(DEMO){S.uid="demo";S.c=c}
+  else if(savedCity&&saved.c===c){S=Object.assign({},S,saved,{upg:saved.upg||{},shield:saved.shield||{},notes:saved.notes||[]})}else{S.uid=uid();S.c=c}
   const k=me();
   rollDay();
   // A save can carry more of today's budget than today allows: written by an older build, or
@@ -273,6 +290,7 @@ $("#startBtn").onclick=()=>{
   const gone=S.at?Math.min(86400,Math.round((Date.now()-S.at)/1000)):0;
   const back=gone>=AWAY_MIN?awayPay(gone):"";
   buildWorld();
+  if(DEMO)demoSeed();
   scenery();
   $("#gate").style.display="none";
   lastTick=Date.now();
@@ -281,6 +299,34 @@ $("#startBtn").onclick=()=>{
   gateSync();
 };
 function me(){return COUNTRIES.find(x=>x.c===S.c)}
+// The summit demo. On a stage there is no time to earn 300 coins or to wait 45 s for a wave,
+// so the day opens part-way through (the DEMO_* values at the top), and a wave is waiting for
+// the first visit to Support. It is laid on top of a blank state
+// in memory only -- save() and flush() refuse to write while DEMO is on -- so a reload without
+// the flag brings back exactly what the phone had. Everything after this is the real game:
+// taps, sends and ads go through the same code as always.
+function demoSeed(){
+  const k=me();
+  S.coins=DEMO_COINS;S.streak=DEMO_STREAK;
+  // A disaster-risk city gets none: its defence ladder would carry the shield to SELF_MAX
+  // within seconds and the "just under the line" moment would be gone before it is shown.
+  S.upg=k.role==="R"?{}:{[UP_CUT[0].id]:DEMO_UPG};
+  if(k.role!=="R"){const cut=Math.round(capCut()*DEMO_DONE);S.tons=capCut()-cut;S.cut=cut}
+  // A coastal sky only clears through Tech sends, so "part of the smog gone" means coins sent.
+  else{S.techToday=S.gaveToday=S.given=Math.round(SKY_FUND*DEMO_DONE)}
+  if(k.role!=="E"){S.def=S.defTotal=Math.round(capDef()*DEMO_DONE);S.shield.self=DEMO_SHIELD}
+  demoWavePending=true;
+}
+// The staged wave lands the first time Support is opened, not at start: its card lasts three
+// minutes, and the presenter decides when in the four that is.
+let demoWavePending=false;
+function demoWave(){
+  demoWavePending=false;
+  const hit=COUNTRIES.find(x=>x.role==="R"&&x.c!==S.c);
+  WORLD[hit.c].shield=Math.min(WORLD[hit.c].shield,DEMO_HIT_SHIELD);
+  emgAdd(hit.c);
+  ticker(`Wave hit ${hit.n}. Shield only ${WORLD[hit.c].shield}%. Relief counts double for 3 minutes — see Support.`,"bad",true);
+}
 // The role decides what a tap means. Only a "both" city gets to choose.
 function mode(){const r=me().role;return r==="E"?"cut":r==="R"?"def":(S.mode==="def"?"def":"cut")}
 function upSet(){return mode()==="def"?UP_DEF:UP_CUT}
@@ -836,8 +882,9 @@ function give(c,free){if(!free&&S.coins<20)return;
 // Both guard on S.c: before the player presses Play, S is still the blank starting object.
 // Opening the link and closing the tab from the gate screen must not overwrite a real save.
 let saveT=null;
-function save(){if(S.c&&saveT===null)saveT=setTimeout(flush,600)}
-function flush(){clearTimeout(saveT);saveT=null;if(S.c){S.at=Date.now();store.set(S)}}
+// A demo writes nothing, ever: the stage state is made up and must not replace a real save.
+function save(){if(S.c&&!DEMO&&saveT===null)saveT=setTimeout(flush,600)}
+function flush(){clearTimeout(saveT);saveT=null;if(S.c&&!DEMO){S.at=Date.now();store.set(S)}}
 addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flush()});
 addEventListener("pagehide",flush);
 
@@ -851,7 +898,9 @@ let tt;function toast(msg,action,label){const t=$("#toast");t.style.display="blo
   if(action)$("#ta").onclick=()=>{action();t.style.display="none"};clearTimeout(tt);tt=setTimeout(()=>t.style.display="none",action?12000:4500)}
 function fact(m){toast(m)}
 function ticker(m,cls,flash){const t=$("#ticker");t.textContent=m;t.className=(cls||"")+(flash?" hit":"")}
-document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab));if(S.c)renderLists(true)});
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab));
+  if(DEMO&&demoWavePending&&b.dataset.tab==="support")demoWave();
+  if(S.c)renderLists(true)});
 document.querySelectorAll("#modeSw button").forEach(b=>b.onclick=()=>{
   if(!S.c||mode()===b.dataset.mode)return;
   S.mode=b.dataset.mode;render();save();

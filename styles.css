@@ -17,6 +17,9 @@ body{font-family:"Pretendard",system-ui,-apple-system,"Segoe UI",Roboto,sans-ser
 /* ---------- top bar ---------- */
 header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px;gap:8px}
 .brand{font-family:var(--head);font-weight:800;letter-spacing:-.02em;font-size:16px;white-space:nowrap}
+/* ?demo=1 only. Small, but it has to be there: the day on screen is staged, not played. */
+.demo{font-family:inherit;font-size:9.5px;font-weight:800;letter-spacing:.08em;color:#fff;background:var(--alert);border-radius:4px;padding:2px 5px;margin-left:4px;vertical-align:2px}
+.demo[hidden]{display:none}
 .hdr{display:flex;align-items:center;gap:6px;min-width:0}
 #chipTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Coins live in the bar, not on the city page: you spend them on the Support page,

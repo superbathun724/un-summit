@@ -3,7 +3,7 @@
   "private": true,
   "description": "Dev-only test harness. The app itself is index.html and needs none of this.",
   "scripts": {
-    "test": "node test/core.test.js && node test/city.test.js"
+    "test": "node test/core.test.js && node test/city.test.js && node test/summit.test.js"
   },
   "devDependencies": {
     "jsdom": "^30.0.1"
