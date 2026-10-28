@@ -22,6 +22,47 @@ If the repo is ever renamed, `og:url` and `og:image` in `index.html` must be cha
 `npm test` derives the expected address from the git remote and fails if they disagree — this
 already broke once, when `un_summit` became `un-summit` and every shared link showed nothing.
 
+## Deploy to Cloudflare Pages (step 1 of the backend move)
+
+The same files, served from `*.pages.dev` too. No code change, no Functions, no D1 yet.
+GitHub Pages keeps running until the move is finished. `wrangler.toml` holds the config:
+
+```toml
+name = "youth-leader"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "."
+```
+
+**Connect the repo (once, in the dashboard — it has to be Git-connected from the start).**
+A project made with `wrangler pages deploy` is a Direct Upload project and can never be switched
+to Git later, so do not create it from the CLI.
+
+1. dash.cloudflare.com → Workers & Pages → Create → Pages → **Connect to Git**.
+2. Authorize the Cloudflare GitHub app for `superbathun724/un-summit` only.
+3. Project name `youth-leader` (must match `name` above). Production branch `main`.
+4. Framework preset **None**. Build command **empty**. Output directory `.` (the dashboard
+   reads it from `wrangler.toml` and greys the field out).
+5. Save and Deploy. The address is `https://youth-leader.pages.dev`. If that name is taken,
+   Cloudflare adds a suffix — use the address it shows, and change `name` to match.
+
+After that, every push to `main` deploys to both. Other branches get preview addresses.
+
+**Check after the first deploy.** On the pages.dev address: pick a city, tap 30 times, buy an
+upgrade, send coins, open Ranking. Progress does not carry over from github.io — localStorage
+is per address, so it starts fresh. The share card still points at github.io (`og:url`,
+`og:image`); that changes only when pages.dev becomes the main address.
+
+**Run it locally the way Pages serves it** (optional):
+
+```
+npx wrangler pages dev
+```
+Then open <http://localhost:8788>.
+
+**Notes.** The whole repo root is published, as on GitHub Pages (`HANDOVER.md`, `test/` included).
+Pages runs `npm install` because `package.json` exists; it only pulls the test harness and does
+not affect the site. Set `SKIP_DEPENDENCY_INSTALL=1` in the project's environment variables to skip it.
+
 ## Check the share card after a deploy
 
 

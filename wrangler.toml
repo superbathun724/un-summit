@@ -1,0 +1,5 @@
+# Cloudflare Pages config. GitHub Pages ignores this file.
+# Step 1 only: the same static files, served from pages.dev. No Functions, no bindings yet.
+name = "youth-leader"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "."
