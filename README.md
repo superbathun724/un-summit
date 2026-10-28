@@ -4,31 +4,26 @@ A casual click game. What a tap does depends on your city: a high-emission city 
 
 Built by SeYeon, MinChae, JiHun — Hyundai Chungun High School, Ulsan, for the 2026 World Tsunami Awareness Day High School Summit.
 
-**Live: <https://superbathun724.github.io/un-summit/>**
+**Live: <https://un-summit.pages.dev/>**
 
 ## Run locally
 
 Open `index.html` in a browser. No build step. The page loads `styles.css` and `app.js`
 next to it, so keep the three together.
 
-## Deploy
+## Deploy (Cloudflare Pages)
 
+Cloudflare Pages, Git-connected, production branch `main`, served at the link above.
+Pushing to `main` deploys. Other branches get preview addresses. GitHub Pages is off.
 
-Pages is already on: `main` / `(root)`, served at the link above. Pushing to `main` deploys.
-`.nojekyll` is included so Pages serves the files as-is, and the repo has to stay **public**
-for Pages on a free account.
+If the Pages project is ever renamed, `og:url` and `og:image` in `index.html` must be changed
+to match. `npm test` derives the expected address from `name` in `wrangler.toml` and fails if
+they disagree — a rename (`un_summit` → `un-summit`) already broke every shared link once.
 
-If the repo is ever renamed, `og:url` and `og:image` in `index.html` must be changed to match.
-`npm test` derives the expected address from the git remote and fails if they disagree — this
-already broke once, when `un_summit` became `un-summit` and every shared link showed nothing.
-
-## Deploy to Cloudflare Pages (step 1 of the backend move)
-
-The same files, served from `*.pages.dev` too. No code change, no Functions, no D1 yet.
-GitHub Pages keeps running until the move is finished. `wrangler.toml` holds the config:
+No code change, no Functions, no D1 yet. `wrangler.toml` holds the config:
 
 ```toml
-name = "youth-leader"
+name = "un-summit"
 compatibility_date = "2026-10-01"
 pages_build_output_dir = "."
 ```
@@ -39,18 +34,14 @@ to Git later, so do not create it from the CLI.
 
 1. dash.cloudflare.com → Workers & Pages → Create → Pages → **Connect to Git**.
 2. Authorize the Cloudflare GitHub app for `superbathun724/un-summit` only.
-3. Project name `youth-leader` (must match `name` above). Production branch `main`.
+3. Project name `un-summit` (must match `name` above). Production branch `main`.
 4. Framework preset **None**. Build command **empty**. Output directory `.` (the dashboard
    reads it from `wrangler.toml` and greys the field out).
-5. Save and Deploy. The address is `https://youth-leader.pages.dev`. If that name is taken,
+5. Save and Deploy. The address is <https://un-summit.pages.dev>. If a name is taken,
    Cloudflare adds a suffix — use the address it shows, and change `name` to match.
 
-After that, every push to `main` deploys to both. Other branches get preview addresses.
-
-**Check after the first deploy.** On the pages.dev address: pick a city, tap 30 times, buy an
-upgrade, send coins, open Ranking. Progress does not carry over from github.io — localStorage
-is per address, so it starts fresh. The share card still points at github.io (`og:url`,
-`og:image`); that changes only when pages.dev becomes the main address.
+**Check after a deploy.** Pick a city, tap 30 times, buy an upgrade, send coins, open Ranking.
+Progress from the old github.io address does not carry over — localStorage is per address.
 
 **Run it locally the way Pages serves it** (optional):
 
@@ -59,7 +50,7 @@ npx wrangler pages dev
 ```
 Then open <http://localhost:8788>.
 
-**Notes.** The whole repo root is published, as on GitHub Pages (`HANDOVER.md`, `test/` included).
+**Notes.** The whole repo root is published (`HANDOVER.md`, `test/` included).
 Pages runs `npm install` because `package.json` exists; it only pulls the test harness and does
 not affect the site. Set `SKIP_DEPENDENCY_INSTALL=1` in the project's environment variables to skip it.
 

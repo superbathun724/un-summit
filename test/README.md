@@ -31,7 +31,7 @@ npm test
 Support 최상단 고정·3분 카운트다운·효과 2배·빨간 점·만료 후 원상복구.
 
 여기에 **공유 링크의 head**도 본다. OG 태그가 다 있는지, `og:image`가 절대경로이고
-`og:url` 밑에 있는지, **`.git/config`의 원격에서 계산한 Pages 주소와 맞는지**
+`og:url` 밑에 있는지, **`wrangler.toml`의 `name`에서 계산한 pages.dev 주소와 맞는지**
 (저장소 이름이 `un_summit`에서 `un-summit`으로 바뀌었을 때 실제로 카드가 깨졌다),
 그 태그들이 가리키는 파일이 저장소에 있는지, 매니페스트가 상대경로인지,
 그리고 **`DATA_SOURCED`와 게이트 문구가 어긋나지 않는지**.

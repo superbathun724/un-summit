@@ -1,14 +1,25 @@
 # 인수인계 문서 — YOUTH LEADER
 
-마지막 갱신 2026-09-18.
+마지막 갱신 2026-10-28.
 
 작업을 다음 사람 또는 다음 세션으로 넘기기 위한 문서다. 지금까지 결정된 것, 아직 안 정해진 것, 다음에 할 일을 모두 담았다. **코드를 건드리기 전에 이 문서를 먼저 읽는다.**
 
 ## 0. 지금 상태 — 여기부터
 
-**라이브: https://superbathun724.github.io/un-summit/** — GitHub Pages, `main` / root, 저장소 public.
+**라이브: https://un-summit.pages.dev/** — Cloudflare Pages(Git 연결), `main` / root. GitHub Pages는 2026-10-28에 일부러 껐다.
 앱은 `index.html` + `styles.css` + `app.js` 세 파일, 빌드 없음, 런타임 의존성 없음.
 회귀 테스트는 `npm install` 후 `npm test` (8절 참고).
+
+### 서밋 이후 — Cloudflare로 옮기는 중 (2026-10-28)
+
+서밋은 끝났다. 이제 개인 프로젝트로 글로벌 확장을 목표로 한다. 백엔드는 **Cloudflare Pages + Workers + D1**로 붙이고, **한 단계씩 하고 멈춘다.**
+
+- **1단계 끝: 코드 변경 없이 pages.dev에 올림.** **https://un-summit.pages.dev/** — 대시보드에서 Git 연결(프로젝트 `un-summit`, `main`, 빌드 명령 없음). `main`에 push하면 배포된다. 설정은 `wrangler.toml`, 절차는 README "Deploy to Cloudflare Pages".
+  - **`wrangler pages deploy`로 프로젝트를 만들지 말 것.** Direct Upload 프로젝트는 나중에 Git 연결로 못 바꾼다.
+  - 확인한 것(2026-10-28, 헤드리스 Chrome으로 실제 pages.dev를 열어서): `index.html`·`app.js`·`styles.css`가 커밋과 바이트 단위로 같다. 380px에서 울산 40탭 → 코인 40, 버스 업그레이드 구매(다음 가격 64), 부산에 20 송금 → relief `20 / 200`, Ranking 12위 노란 테두리. 새로고침 → `Continue as Ulsan` → 진행 그대로. 콘솔 에러 없음. **실제 폰으로는 아직 안 봤다.**
+  - 저장은 주소별이다. github.io에서 하던 진행은 pages.dev로 안 넘어온다.
+- **github.io는 일부러 껐다(2026-10-28).** 주소는 전부 pages.dev로 바꿨다: README, CLAUDE.md, 이 문서, 공유 카드(`og:url`, `og:image`). `npm test`는 이제 git 원격이 아니라 `wrangler.toml`의 `name`에서 주소를 계산한다. 프로젝트 이름을 바꾸면 og 태그 두 개도 같이 바꿀 것. 카카오톡은 옛 카드를 캐시하니 `?v=2`로 확인.
+- **2단계 전에 정할 것:** Pages Functions로 할지, Workers 정적 파일(static assets)로 옮길지. Cloudflare는 새 프로젝트에 후자를 권한다. 둘 다 D1을 붙일 수 있다. 7절 7번 계획(엔드포인트 둘: 오늘 점수 올리기 / 도시 평균 받기)은 그대로 쓴다. `VOTES_REAL`을 켜는 것은 진짜 집계가 붙는 커밋에서만 한다.
 
 ### 지금 열려 있는 것
 
@@ -22,7 +33,7 @@
 
 ### 폰 체크리스트 (서밋 준비 5건 — 아직 실제 폰으로 안 돌았다)
 
-**A. 기본 (CLAUDE.md 절차)** — `https://superbathun724.github.io/un-summit/`
+**A. 기본 (CLAUDE.md 절차)** — `https://un-summit.pages.dev/`
 - [ ] 도시 고르고 시작 → 30번 탭 → 스모그가 걷히고 코인이 오르나
 - [ ] 25번째 탭의 상식 토스트가 약 4.5초 뒤 저절로 사라지나
 - [ ] 업그레이드 1개 구매 → 가격이 오르나
@@ -49,7 +60,7 @@
 - [ ] 송금 1번 → relief `20 / 200`
 - [ ] 맨 위 설명이 한 줄이고, `How the score works`를 펼치면 원래 설명 그대로인가
 
-**E. 발표 리허설 `?demo=1` (작업 1)** — `https://superbathun724.github.io/un-summit/?demo=1`
+**E. 발표 리허설 `?demo=1` (작업 1)** — `https://un-summit.pages.dev/?demo=1`
 - [ ] 헤더의 빨간 `DEMO` 배지가 무대 화면에서 읽히나
 - [ ] 울산: 코인 약 300, 스모그가 조금 걷힘, streak 4일
 - [ ] Support를 처음 열 때 빨간 긴급 카드(부산)가 뜨나

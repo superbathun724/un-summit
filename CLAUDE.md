@@ -3,12 +3,12 @@
 Read HANDOVER.md first. It has the full context and the decisions already made. Do not re-open decided questions unless asked.
 
 ## What this is
-YOUTH LEADER: a static click game deployed on GitHub Pages, live at
-https://superbathun724.github.io/un-summit/ . Pilot = Korean cities. Global = countries
+YOUTH LEADER: a static click game deployed on Cloudflare Pages, live at
+https://un-summit.pages.dev/ . Pilot = Korean cities. Global = countries
 (data already in COUNTRIES_GLOBAL).
 
 ## Constraints
-- Keep it a single static site that works on GitHub Pages (no server required for the pilot). If a backend becomes necessary (real rankings, real geo-IP, anti-cheat), put it behind a clear flag and keep the static fallback working.
+- Keep it a single static site that works as plain files (no server required for the pilot). If a backend becomes necessary (real rankings, real geo-IP, anti-cheat), put it behind a clear flag and keep the static fallback working.
 - Mobile first, ~380px wide. Must work on a phone browser from a single link.
 - No login, no names, no GPS. Country/city from IP (server) or user choice (static). Random device ID in localStorage only.
 - No chat features. Ever.
